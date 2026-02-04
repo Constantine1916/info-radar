@@ -36,35 +36,63 @@ export default function Dashboard() {
   }, [authLoading, signedIn, router]);
 
   const fetchData = async () => {
-    if (fetchStartedRef.current) return;
-
-    const session = await supabase?.auth.getSession();
-    const token = session?.data.session?.access_token;
-    fetchStartedRef.current = true;
-
-    if (!supabase || !token) {
+    console.log('fetchData called, supabase:', !!supabase);
+    
+    if (!supabase) {
+      console.log('No supabase, setting loading to false');
       setLoading(false);
       return;
     }
 
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error('getSession error:', error);
+      setLoading(false);
+      return;
+    }
+    
+    if (!session?.access_token) {
+      console.log('No access token, setting loading to false');
+      setLoading(false);
+      return;
+    }
+
+    const token = session.access_token;
+    console.log('Got token, fetching data...');
+
     try {
       // Fetch subscriptions
+      console.log('Fetching subscriptions...');
       const subsRes = await fetch('/api/subscriptions', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const subsData = await subsRes.json();
-      setSubscriptions(subsData.subscriptions?.map((s: any) => s.domain) || []);
+      
+      if (!subsRes.ok) {
+        console.error('subscriptions API error:', subsRes.status);
+      } else {
+        const subsData = await subsRes.json();
+        setSubscriptions(subsData.subscriptions?.map((s: any) => s.domain) || []);
+        console.log('Subscriptions loaded:', subsData.subscriptions?.length);
+      }
 
       // Fetch Bot config status
+      console.log('Fetching Telegram config...');
       const tgRes = await fetch('/api/bot/config', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const tgData = await tgRes.json();
-      setTelegramStatus({ verified: tgData.verified, chatId: tgData.chatId });
+      
+      if (!tgRes.ok) {
+        console.error('bot config API error:', tgRes.status);
+      } else {
+        const tgData = await tgRes.json();
+        setTelegramStatus({ verified: tgData.verified, chatId: tgData.chatId });
+        console.log('Telegram config loaded:', tgData.verified);
+      }
     } catch (error) {
       console.error('Failed to fetch data:', error);
-      fetchStartedRef.current = false;
     } finally {
+      console.log('fetchData complete, setting loading to false');
       setLoading(false);
     }
   };
