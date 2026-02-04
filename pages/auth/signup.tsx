@@ -19,6 +19,12 @@ export default function Signup() {
     setLoading(true);
     setError('');
 
+    if (!supabase) {
+      setError('系统初始化中，请稍后再试');
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
