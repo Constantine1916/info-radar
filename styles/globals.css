@@ -74,7 +74,7 @@
 
   /* Premium focus styles */
   *:focus-visible {
-    @apply outline-none ring-2 ring-ring/20 ring-offset-2 ring-offset-background;
+    @apply outline-none ring-2 ring-[var(--ring)] ring-offset-2 ring-offset-[var(--background)];
   }
 }
 
