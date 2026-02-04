@@ -13,52 +13,91 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [subscriptions, setSubscriptions] = useState<string[]>([]);
   const [telegramStatus, setTelegramStatus] = useState<{ verified: boolean; chatId?: string }>({ verified: false });
+  const [verificationCode, setVerificationCode] = useState('');
   const [pushing, setPushing] = useState(false);
+  const fetchStartedRef = useRef(false);
 
   useEffect(() => {
+    console.log('Dashboard useEffect:', { authLoading, signedIn, user: !!user });
+    
+    // 未登录，跳转到登录页
     if (!authLoading && !signedIn) {
+      console.log('Not signed in, redirecting to login...');
       router.push('/auth/login');
       return;
     }
-    if (signedIn) {
+    
+    // 已登录且未开始获取数据
+    if (signedIn && !fetchStartedRef.current) {
+      console.log('Signed in, fetching data...');
+      fetchStartedRef.current = true;
       fetchData();
     }
   }, [authLoading, signedIn, router]);
 
   const fetchData = async () => {
+    console.log('fetchData called, supabase:', !!supabase);
+    
     if (!supabase) {
+      console.log('No supabase, setting loading to false');
       setLoading(false);
       return;
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error('getSession error:', error);
+      setLoading(false);
+      return;
+    }
+    
     if (!session?.access_token) {
+      console.log('No access token, setting loading to false');
       setLoading(false);
       return;
     }
 
     const token = session.access_token;
+    console.log('Got token, fetching data...');
 
     try {
+      // Fetch subscriptions
+      console.log('Fetching subscriptions...');
       const subsRes = await fetch('/api/subscriptions', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const subsData = await subsRes.json();
-      setSubscriptions(subsData.subscriptions?.map((s: any) => s.domain) || []);
+      
+      if (!subsRes.ok) {
+        console.error('subscriptions API error:', subsRes.status);
+      } else {
+        const subsData = await subsRes.json();
+        setSubscriptions(subsData.subscriptions?.map((s: any) => s.domain) || []);
+        console.log('Subscriptions loaded:', subsData.subscriptions?.length);
+      }
 
+      // Fetch Bot config status
+      console.log('Fetching Telegram config...');
       const tgRes = await fetch('/api/bot/config', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const tgData = await tgRes.json();
-      setTelegramStatus({ verified: tgData.verified, chatId: tgData.chatId });
+      
+      if (!tgRes.ok) {
+        console.error('bot config API error:', tgRes.status);
+      } else {
+        const tgData = await tgRes.json();
+        setTelegramStatus({ verified: tgData.verified, chatId: tgData.chatId });
+        console.log('Telegram config loaded:', tgData.verified);
+      }
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
+      console.log('fetchData complete, setting loading to false');
       setLoading(false);
     }
   };
 
-  const handleGenerateCode = () => {
+  const handleGenerateCode = async () => {
     router.push('/settings');
   };
 
@@ -78,6 +117,18 @@ export default function Dashboard() {
     });
 
     setSubscriptions(domains);
+    alert('订阅配置已保存！');
+  };
+
+  const handleUnbind = async () => {
+    router.push('/settings');
+  };
+
+  const toggleDomain = (domain: string) => {
+    const newSubs = subscriptions.includes(domain)
+      ? subscriptions.filter((d) => d !== domain)
+      : [...subscriptions, domain];
+    setSubscriptions(newSubs);
   };
 
   const handlePushNow = async () => {
@@ -96,7 +147,7 @@ export default function Dashboard() {
       const data = await res.json();
 
       if (res.ok) {
-        alert(`已发送 ${data.itemsCount} 条信息`);
+        alert(`推送成功！已发送 ${data.itemsCount} 条信息`);
       } else {
         alert(data.error || '推送失败');
       }
@@ -110,133 +161,174 @@ export default function Dashboard() {
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#fafafa]">
-        <div className="text-center">
-          <div className="text-3xl mb-3">Info Radar</div>
-          <p className="text-gray-400 text-sm">Loading...</p>
+        <div className="text-center page-enter">
+          <div className="text-4xl mb-4 animate-pulse">📡</div>
+          <p className="text-gray-500">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#fafafa]">
+    <div className="min-h-screen bg-[#fafafa] page-enter">
       <Head>
         <title>Dashboard - Info Radar</title>
       </Head>
 
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white">
+      <header className="border-b border-gray-100 bg-white/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <Link href="/" className="text-base font-medium text-gray-900">
-            Info Radar
+          <Link href="/" className="text-xl font-semibold text-gray-900 hover:text-gray-700 transition-colors">
+            📡 Info Radar
           </Link>
-          <div className="flex items-center gap-6 text-sm">
-            <Link href="/hot" className="text-gray-500 hover:text-gray-900">
-              热门
+          <div className="flex items-center gap-6">
+            <Link href="/hot" className="text-sm text-gray-500 hover:text-gray-900 transition-colors flex items-center gap-1.5">
+              <span>🔥</span>
+              <span>热门</span>
             </Link>
-            <Link href="/history" className="text-gray-500 hover:text-gray-900">
-              历史
+            <Link href="/history" className="text-sm text-gray-500 hover:text-gray-900 transition-colors flex items-center gap-1.5">
+              <span>📊</span>
+              <span>历史</span>
             </Link>
-            <span className="text-gray-400">{user?.email}</span>
-            <button onClick={() => signOut()} className="text-gray-500 hover:text-gray-900">
-              退出
-            </button>
+            <span className="text-sm text-gray-400">{user?.email}</span>
+            <Button variant="ghost" onClick={() => signOut()} className="hover:bg-gray-100">退出</Button>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-12 max-w-5xl">
-        {/* Section 1: Status Cards */}
-        <section className="grid grid-cols-3 gap-px bg-gray-200 mb-12">
-          {/* Telegram Card */}
-          <div className="bg-white p-6">
-            <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">Telegram</div>
-            <div className="text-sm text-gray-600 mb-4">
-              {telegramStatus.verified ? '已绑定' : '未绑定'}
+      <main className="container mx-auto px-4 py-10 max-w-4xl">
+        <div className="mb-10">
+          <h2 className="text-3xl font-semibold text-gray-900 mb-2">欢迎回来</h2>
+          <p className="text-gray-500">配置你的个性化信息订阅</p>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          {/* Telegram绑定 */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div className="flex items-center gap-4 mb-5">
+              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-2xl shadow-soft">
+                ✉️
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 text-base">Telegram</h3>
+                <p className="text-xs text-gray-500">
+                  {telegramStatus.verified ? '✓ 已绑定' : '未绑定'}
+                </p>
+              </div>
             </div>
+
             {telegramStatus.verified ? (
-              <div className="space-y-2">
-                <Button onClick={handlePushNow} disabled={pushing || subscriptions.length === 0} className="w-full">
+              <div className="space-y-3">
+                <Button onClick={handlePushNow} disabled={pushing || subscriptions.length === 0} className="w-full shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all">
                   {pushing ? '推送中...' : '立即推送'}
                 </Button>
-                <button onClick={handleGenerateCode} className="w-full text-xs text-gray-400 hover:text-gray-600">
+                <Button variant="outline" onClick={handleUnbind} className="w-full hover:bg-gray-50">
                   管理配置
-                </button>
+                </Button>
               </div>
             ) : (
-              <Button onClick={handleGenerateCode}>
-                绑定
+              <Button onClick={handleGenerateCode} className="w-full shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                绑定 Telegram
               </Button>
             )}
           </div>
 
-          {/* Subscriptions Card */}
-          <div className="bg-white p-6">
-            <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">已订阅</div>
-            <div className="text-4xl font-light text-gray-900 mb-1">
+          {/* 订阅统计 */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div className="flex items-center gap-4 mb-5">
+              <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center text-2xl shadow-soft">
+                📊
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 text-base">已订阅</h3>
+                <p className="text-xs text-gray-500">
+                  {subscriptions.length} / 9 个领域
+                </p>
+              </div>
+            </div>
+            <div className="text-4xl font-light text-gray-900">
               {subscriptions.length}
             </div>
-            <div className="text-xs text-gray-400">
-              / 9 个领域
-            </div>
           </div>
 
-          {/* Next Push Card */}
-          <div className="bg-white p-6">
-            <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">下次推送</div>
-            <div className="text-sm text-gray-600 mb-1">
-              明天 09:00
+          {/* 推送统计 */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div className="flex items-center gap-4 mb-5">
+              <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-2xl shadow-soft">
+                📬
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 text-base">下次推送</h3>
+                <p className="text-xs text-gray-500">
+                  明天 09:00
+                </p>
+              </div>
             </div>
-            <div className="text-xs text-gray-400">
-              {subscriptions.length > 0 ? '自动推送' : '请先订阅'}
+            <div className="text-sm text-gray-600 font-medium">
+              {subscriptions.length > 0 ? '✓ 自动推送' : '请先订阅'}
             </div>
           </div>
-        </section>
+        </div>
 
-        {/* Section 2: Subscription Config */}
-        <section>
+        {/* 订阅配置 */}
+        <div className="bg-white border border-gray-100 rounded-2xl p-8">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-medium text-gray-900">订阅领域</h2>
-            <span className="text-sm text-gray-400">
-              {subscriptions.length} / 9
+            <h3 className="font-semibold text-gray-900 text-lg">选择关注的领域</h3>
+            <span className="text-sm text-gray-500">
+              已选择 {subscriptions.length} / 9
             </span>
           </div>
           
-          <div className="grid grid-cols-3 gap-px bg-gray-200">
+          {/* 领域网格 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Object.entries(DOMAINS).map(([key, { name, emoji, description }]) => {
               const isSelected = subscriptions.includes(key);
               return (
                 <div
                   key={key}
-                  onClick={() => {
-                    const newSubs = isSelected
-                      ? subscriptions.filter((d) => d !== key)
-                      : [...subscriptions, key];
-                    setSubscriptions(newSubs);
-                  }}
-                  className={`bg-white p-5 cursor-pointer transition-colors ${
-                    isSelected ? 'bg-gray-50' : 'hover:bg-gray-50'
+                  onClick={() => toggleDomain(key)}
+                  className={`relative p-5 rounded-xl border cursor-pointer transition-all duration-300 ${
+                    isSelected
+                      ? 'border-gray-900 bg-gray-50 shadow-md ring-1 ring-gray-900/10 hover:shadow-lg'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/80 hover:shadow-md'
                   }`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg">{emoji}</span>
-                      <span className={`text-sm ${isSelected ? 'text-gray-900' : 'text-gray-600'}`}>
-                        {name}
-                      </span>
+                  {/* 选中标记 */}
+                  {isSelected && (
+                    <div className="absolute top-3 right-3 w-6 h-6 bg-gray-900 rounded-full flex items-center justify-center shadow-md transition-transform duration-300 hover:scale-110">
+                      <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
                     </div>
-                    {isSelected && (
-                      <span className="text-gray-900">×</span>
-                    )}
+                  )}
+                  
+                  {/* 图标 */}
+                  <div className="text-2.5xl mb-3">{emoji}</div>
+                  
+                  {/* 名称 */}
+                  <div className={`text-base font-semibold ${
+                    isSelected ? 'text-gray-900' : 'text-gray-700'
+                  }`}>
+                    {name}
+                  </div>
+                  
+                  {/* 描述 */}
+                  <div className="text-xs text-gray-500 mt-2 leading-relaxed line-clamp-2">
+                    {description}
                   </div>
                 </div>
               );
             })}
           </div>
 
-          <div className="mt-6 flex gap-4">
-            <Button onClick={() => handleSaveSubscriptions(subscriptions)}>
-              保存
+          {/* 操作按钮 */}
+          <div className="mt-8 flex gap-4">
+            <Button
+              onClick={() => handleSaveSubscriptions(subscriptions)}
+              className="flex-1 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
+            >
+              保存配置
             </Button>
             <Button
               variant="outline"
@@ -248,11 +340,12 @@ export default function Dashboard() {
                   handleSaveSubscriptions(allDomains);
                 }
               }}
+              className="px-6 hover:bg-gray-50 transition-all"
             >
               {subscriptions.length === Object.keys(DOMAINS).length ? '取消全选' : '全选'}
             </Button>
           </div>
-        </section>
+        </div>
       </main>
     </div>
   );
