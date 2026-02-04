@@ -87,5 +87,14 @@ export const RSS_SOURCES: DataSource[] = [
     type: 'rss',
     domain: 'Investment',
     credibility: 3
+  },
+
+  // 高质量中文技术/效率源
+  {
+    name: '少数派',
+    url: 'https://sspai.com/feed',
+    type: 'rss',
+    domain: 'Productivity',
+    credibility: 4
   }
 ];
