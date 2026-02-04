@@ -31,9 +31,14 @@ export default function Dashboard() {
   const fetchData = async () => {
     if (fetchStartedRef.current) return;
 
-    const session = await supabase.auth.getSession();
-    const token = session.data.session?.access_token;
+    const session = await supabase?.auth.getSession();
+    const token = session?.data.session?.access_token;
     fetchStartedRef.current = true;
+
+    if (!supabase || !token) {
+      setLoading(false);
+      return;
+    }
 
     try {
       // Fetch subscriptions
@@ -62,6 +67,8 @@ export default function Dashboard() {
   };
 
   const handleSaveSubscriptions = async (domains: string[]) => {
+    if (!supabase) return;
+    
     const session = await supabase.auth.getSession();
     const token = session.data.session?.access_token;
 
@@ -90,6 +97,8 @@ export default function Dashboard() {
   };
 
   const handlePushNow = async () => {
+    if (!supabase) return;
+    
     setPushing(true);
     try {
       const session = await supabase.auth.getSession();

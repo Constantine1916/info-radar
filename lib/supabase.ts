@@ -5,16 +5,15 @@ import './env-check';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-console.log('🔍 Runtime Supabase config check:');
-console.log('  supabaseUrl:', supabaseUrl ? 'Set' : 'MISSING');
-console.log('  supabaseAnonKey:', supabaseAnonKey ? 'Set' : 'MISSING');
+// Only create client if environment variables are available
+let supabaseClient = null;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  const errorMsg = `Missing Supabase environment variables! URL: ${supabaseUrl ? 'OK' : 'MISSING'}, Key: ${supabaseAnonKey ? 'OK' : 'MISSING'}`;
-  console.error('❌', errorMsg);
-  throw new Error(errorMsg);
+if (supabaseUrl && supabaseAnonKey) {
+  supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+} else {
+  console.warn('⚠️ Supabase environment variables missing - some features may not work');
 }
 
 // Client-side Supabase client (ONLY use this in pages/components)
 // For API routes, import from './supabase-admin' instead
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = supabaseClient;

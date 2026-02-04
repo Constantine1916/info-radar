@@ -46,6 +46,11 @@ export default function History() {
   }, [user, authLoading, router]);
 
   const fetchHistory = async () => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+    
     const session = await supabase.auth.getSession();
     const token = session.data.session?.access_token;
 
@@ -63,6 +68,8 @@ export default function History() {
   };
 
   const fetchRecordItems = async (record: PushRecord) => {
+    if (!supabase) return;
+    
     const session = await supabase.auth.getSession();
     const token = session.data.session?.access_token;
 
@@ -109,6 +116,8 @@ export default function History() {
   };
 
   const generateSummary = async (itemId: string) => {
+    if (!supabase) return;
+    
     const newGenerating = new Set(generatingSummaries);
     newGenerating.add(itemId);
     setGeneratingSummaries(newGenerating);

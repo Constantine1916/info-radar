@@ -31,6 +31,8 @@ export default function Settings() {
   }, [user]);
 
   async function loadBotConfig() {
+    if (!supabase) return;
+    
     try {
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
@@ -53,6 +55,8 @@ export default function Settings() {
   }
 
   async function handleSave() {
+    if (!supabase) return;
+    
     if (!botToken || !chatId) {
       setMessage('请填写 Bot Token 和 Chat ID');
       return;
@@ -92,6 +96,8 @@ export default function Settings() {
   }
 
   async function handleRemove() {
+    if (!supabase) return;
+    
     if (!confirm('确定要移除 Bot 配置吗？')) return;
 
     setSaving(true);
