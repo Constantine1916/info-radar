@@ -28,6 +28,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }, 3000);
 
+    // Skip if supabase is not initialized
+    if (!supabase) {
+      setLoading(false);
+      clearTimeout(timeoutId);
+      return;
+    }
+
     // Get initial session
     supabase.auth.getSession()
       .then(({ data: { session }, error }) => {
@@ -61,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = async () => {
+    if (!supabase) return;
     await supabase.auth.signOut();
   };
 
