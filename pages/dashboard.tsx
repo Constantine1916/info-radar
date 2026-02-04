@@ -8,7 +8,7 @@ import { Button } from '../components/ui/button';
 import { DOMAINS } from '../lib/types';
 
 export default function Dashboard() {
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, loading: authLoading, signedIn, signOut } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [subscriptions, setSubscriptions] = useState<string[]>([]);
@@ -18,15 +18,22 @@ export default function Dashboard() {
   const fetchStartedRef = useRef(false);
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    console.log('Dashboard useEffect:', { authLoading, signedIn, user: !!user });
+    
+    // 未登录，跳转到登录页
+    if (!authLoading && !signedIn) {
+      console.log('Not signed in, redirecting to login...');
       router.push('/auth/login');
       return;
     }
-    if (user && !fetchStartedRef.current) {
+    
+    // 已登录且未开始获取数据
+    if (signedIn && !fetchStartedRef.current) {
+      console.log('Signed in, fetching data...');
       fetchStartedRef.current = true;
       fetchData();
     }
-  }, [user, authLoading, router]);
+  }, [authLoading, signedIn, router]);
 
   const fetchData = async () => {
     if (fetchStartedRef.current) return;

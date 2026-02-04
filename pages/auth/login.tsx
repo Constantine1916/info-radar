@@ -1,17 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
 import { supabase } from '../../lib/supabase';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { useAuth } from '../../lib/auth-context';
 
 export default function Login() {
   const router = useRouter();
+  const { signedIn, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // 如果已经登录，直接跳转到 Dashboard
+  useEffect(() => {
+    if (!authLoading && signedIn) {
+      router.push('/dashboard');
+    }
+  }, [authLoading, signedIn, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,9 +42,24 @@ export default function Login() {
       setError(error.message);
       setLoading(false);
     } else {
-      router.push('/dashboard');
+      // 登录成功，等待 auth 状态更新后自动跳转
+      console.log('Login successful, waiting for auth state...');
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 500);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#fafafa]">
+        <div className="text-center">
+          <div className="text-4xl mb-4">📡</div>
+          <p className="text-gray-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#fafafa] px-4">
