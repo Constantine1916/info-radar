@@ -63,6 +63,12 @@
     @apply border-border;
   }
 
+  html {
+    scroll-behavior: smooth;
+    /* 禁用 Safari 滚动到边缘的闪光效果 */
+    -webkit-overflow-scrolling: auto;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -70,10 +76,8 @@
     -moz-osx-font-smoothing: grayscale;
     letter-spacing: -0.01em;
     line-height: 1.6;
-  }
-
-  html {
-    scroll-behavior: smooth;
+    /* 禁用滚动到边缘的闪光效果 */
+    overscroll-behavior: none;
   }
 
   /* Premium focus styles */
