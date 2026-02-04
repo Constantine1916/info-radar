@@ -15,7 +15,6 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // 如果已经登录，直接跳转到 Dashboard
   useEffect(() => {
     if (!authLoading && signedIn) {
       router.push('/dashboard');
@@ -28,7 +27,7 @@ export default function Login() {
     setError('');
 
     if (!supabase) {
-      setError('系统初始化中，请稍后再试');
+      setError('系统初始化中');
       setLoading(false);
       return;
     }
@@ -42,11 +41,9 @@ export default function Login() {
       setError(error.message);
       setLoading(false);
     } else {
-      // 登录成功，等待 auth 状态更新后自动跳转
-      console.log('Login successful, waiting for auth state...');
       setTimeout(() => {
         router.push('/dashboard');
-      }, 500);
+      }, 300);
     }
   };
 
@@ -54,39 +51,35 @@ export default function Login() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#fafafa]">
         <div className="text-center">
-          <div className="text-4xl mb-4">📡</div>
-          <p className="text-gray-500">Loading...</p>
+          <div className="text-3xl mb-3">Info Radar</div>
+          <p className="text-gray-400 text-sm">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#fafafa] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#fafafa]">
       <Head>
         <title>登录 - Info Radar</title>
       </Head>
 
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-block">
-            <span className="text-3xl">📡</span>
+      <div className="w-full max-w-sm px-6">
+        <div className="mb-10">
+          <Link href="/" className="block text-center text-3xl mb-3">
+            Info Radar
           </Link>
-          <h1 className="mt-4 text-xl font-medium text-gray-900">登录 Info Radar</h1>
+          <h1 className="text-center text-base text-gray-600">登录</h1>
         </div>
 
-        {/* Login Form */}
-        <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-soft">
+        <div className="bg-white border border-gray-200 p-6">
           <form onSubmit={handleLogin} className="space-y-4">
             {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
-                {error}
-              </div>
+              <div className="text-xs text-red-600">{error}</div>
             )}
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-gray-700">Email</label>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Email</label>
               <Input
                 type="email"
                 placeholder="your@email.com"
@@ -96,8 +89,8 @@ export default function Login() {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-gray-700">密码</label>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">密码</label>
               <Input
                 type="password"
                 placeholder="输入密码"
@@ -112,12 +105,14 @@ export default function Login() {
             </Button>
           </form>
 
-          <p className="mt-4 text-sm text-center text-gray-500">
-            还没有账号？{' '}
-            <Link href="/auth/signup" className="text-gray-900 hover:underline">
-              注册
-            </Link>
-          </p>
+          <div className="mt-4 text-center">
+            <span className="text-xs text-gray-400">
+              还没有账号？{' '}
+              <Link href="/auth/signup" className="text-gray-600 hover:text-gray-900">
+                注册
+              </Link>
+            </span>
+          </div>
         </div>
       </div>
     </div>
