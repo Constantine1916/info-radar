@@ -1,18 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
 import { supabase } from '../../lib/supabase';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { useAuth } from '../../lib/auth-context';
 
 export default function Signup() {
   const router = useRouter();
+  const { signedIn, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+
+  // 如果已经登录，直接跳转到 Dashboard
+  useEffect(() => {
+    if (!authLoading && signedIn && success) {
+      router.push('/dashboard');
+    }
+  }, [authLoading, signedIn, success, router]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +37,10 @@ export default function Signup() {
     const { error } = await supabase.auth.signUp({
       email,
       password,
+      // 添加邮箱确认后的回调地址（可选）
+      options: {
+        emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined,
+      },
     });
 
     if (error) {
@@ -35,11 +48,21 @@ export default function Signup() {
       setLoading(false);
     } else {
       setSuccess(true);
-      setLoading(false);
-      // Auto login and redirect
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 1000);
+      // 注册成功后立即自动登录
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (loginError) {
+        // 如果自动登录失败（比如需要邮箱验证），显示提示
+        setError('注册成功！但需要邮箱验证，请查收邮件并点击确认链接');
+        setLoading(false);
+      } else {
+        // 登录成功，等待 auth 状态更新后跳转
+        setLoading(false);
+        // useEffect 会检测到 signedIn 变为 true 后自动跳转
+      }
     }
   };
 
