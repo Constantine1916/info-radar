@@ -27,6 +27,7 @@ export default function Signup() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccess(false);
 
     if (!supabase) {
       setError('系统初始化中，请稍后再试');
@@ -34,36 +35,41 @@ export default function Signup() {
       return;
     }
 
-    const { error } = await supabase.auth.signUp({
+    // 1. 先尝试注册
+    const { error: signupError } = await supabase.auth.signUp({
       email,
       password,
-      // 添加邮箱确认后的回调地址（可选）
       options: {
         emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined,
       },
     });
 
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-    } else {
-      setSuccess(true);
-      // 注册成功后立即自动登录
-      const { error: loginError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (loginError) {
-        // 如果自动登录失败（比如需要邮箱验证），显示提示
-        setError('注册成功！但需要邮箱验证，请查收邮件并点击确认链接');
-        setLoading(false);
+    if (signupError) {
+      // 检查是否是"账号已存在"错误
+      if (signupError.message.includes('User already registered')) {
+        setError('账号已存在！正在跳转登录页...');
+        setTimeout(() => router.push('/auth/login'), 1500);
       } else {
-        // 登录成功，等待 auth 状态更新后跳转
-        setLoading(false);
-        // useEffect 会检测到 signedIn 变为 true 后自动跳转
+        setError(signupError.message);
       }
+      setLoading(false);
+      return;
     }
+
+    // 2. 注册成功，尝试自动登录
+    const { error: loginError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (loginError) {
+      // 自动登录失败，说明需要邮箱验证
+      setError('注册成功！但需要邮箱验证，请查收邮件并点击确认链接');
+    } else {
+      // 自动登录成功
+      setSuccess(true);
+    }
+    setLoading(false);
   };
 
   return (
