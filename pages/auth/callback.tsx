@@ -1,20 +1,21 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { supabase } from '../../lib/supabase';
 
 export default function Callback() {
   const router = useRouter();
+  const [processed, setProcessed] = useState(false);
 
   useEffect(() => {
     // Handle the OAuth/email confirmation callback
     const handleCallback = async () => {
-      if (typeof window === 'undefined') return;
+      if (typeof window === 'undefined' || processed) return;
 
       // Get the URL hash and query parameters
       const { hash } = window.location;
 
-      if (hash && hash.includes('access_token')) {
+      if (hash && hash.includes('access_token') && supabase) {
         // Exchange the code for a session
         const { error } = await supabase.auth.getSession();
 
@@ -22,16 +23,18 @@ export default function Callback() {
           console.error('Session error:', error);
         }
 
+        setProcessed(true);
         // Redirect to dashboard
         router.push('/dashboard');
       } else {
-        // No hash, just redirect to dashboard (might already be logged in)
+        // No hash or no supabase, just redirect to dashboard
+        setProcessed(true);
         router.push('/dashboard');
       }
     };
 
     handleCallback();
-  }, [router]);
+  }, [router, processed]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#fafafa]">
