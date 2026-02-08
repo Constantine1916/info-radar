@@ -123,7 +123,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     tgMessage += `━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
     tgMessage += `📊 为你精选 <b>${totalCount}</b> 条最新信息\n\n`;
 
-    // 构建企微消息（Markdown 格式，支持 [标题](URL) 超链接）
+    // 构建企微消息（Markdown 格式，支持 [标题](URL) 超链接，参考 TrendRadar）
     let wecomMessage = `📡 **Info Radar 推送**\n📅 ${date}\n\n`;
     wecomMessage += `━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
     wecomMessage += `📊 为你精选 **${totalCount}** 条最新信息\n\n`;
@@ -147,13 +147,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const title = item.title.substring(0, 80) + (item.title.length > 80 ? '...' : '');
         
         // Telegram: HTML 格式 <a href="url">标题</a>
-        tgMessage += `${i + 1}. ${title}\n`;
-        tgMessage += `   🔗 <a href="${item.link}">🔗 链接</a>\n`;
+        tgMessage += `${i + 1}. <a href="${item.link}">${title}</a>\n`;
         tgMessage += `   📍 ${item.source} | ⭐ ${item.credibility_score}/5\n\n`;
         
-        // 企微: Markdown 格式 [标题](URL)
-        wecomMessage += `${i + 1}. ${title}\n`;
-        wecomMessage += `   🔗 [🔗 链接](${item.link})\n`;
+        // 企微: Markdown 格式 [标题](URL)，参考 TrendRadar
+        wecomMessage += `${i + 1}. [${title}](${item.link})\n`;
         wecomMessage += `   📍 ${item.source} | ⭐ ${item.credibility_score}/5\n\n`;
       });
     }
