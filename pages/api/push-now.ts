@@ -162,8 +162,8 @@ export default async function handler(
     const shouldSendTelegram = !channel || channel === 'telegram';
 
     // Send to WeCom
-    if (hasWeCom && shouldSendWeCom) {
-      const webhookUrl = profile.webhook_key!.includes('key=') 
+    if (hasWeCom && shouldSendWeCom && profile.webhook_key) {
+      const webhookUrl = profile.webhook_key.includes('key=') 
         ? profile.webhook_key 
         : `https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${profile.webhook_key}`;
       await sendWeComMessage(webhookUrl, message);
@@ -171,8 +171,8 @@ export default async function handler(
     }
 
     // Send to Telegram
-    if (hasTelegram && shouldSendTelegram) {
-      await sendTelegramMessage(profile.telegram_bot_token!, profile.telegram_chat_id!, message);
+    if (hasTelegram && shouldSendTelegram && profile.telegram_bot_token && profile.telegram_chat_id) {
+      await sendTelegramMessage(profile.telegram_bot_token, profile.telegram_chat_id, message);
       results.push('Telegram');
     }
 
