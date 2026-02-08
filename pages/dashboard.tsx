@@ -203,6 +203,10 @@ export default function Dashboard() {
   };
 
   const handleCollect = async () => {
+    if (!supabase) {
+      alert('初始化中，请稍候...');
+      return;
+    }
     setCollecting(true);
     setCollectResult(null);
     try {
