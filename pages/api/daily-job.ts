@@ -51,8 +51,9 @@ export default async function handler(
     // Step 1: Collect data
     console.log('📊 Step 1: Collecting data...');
     try {
-      const collectResponse = await axios.get(
+      const collectResponse = await axios.post(
         `${process.env.NEXT_PUBLIC_SITE_URL}/api/collect`,
+        {},
         {
           headers: {
             'Authorization': `Bearer ${expectedToken}`,
@@ -61,7 +62,7 @@ export default async function handler(
       );
       
       results.collect.success = collectResponse.data.success;
-      results.collect.count = collectResponse.data.filtered || 0;
+      results.collect.count = collectResponse.data.collected || 0;
       console.log(`✅ Collected ${results.collect.count} items`);
     } catch (error: any) {
       results.collect.error = error.message;
