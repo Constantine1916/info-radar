@@ -1,9 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
-import Parser from 'rss-parser';
-import { DOMAINS, DOMAIN_CONFIG, DataSource } from '../../lib/types';
-import { createHash } from 'crypto';
+import { DOMAINS, DOMAIN_CONFIG } from '../../lib/types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -11,30 +9,6 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-const parser = new Parser();
-
-// RSSHub 服务地址
-const RSSHUB_BASE = process.env.RSSHUB_URL;
-
-// 数据源配置
-const RSS_SOURCES: DataSource[] = [
-  { name: 'Hacker News', url: 'https://hnrss.org/frontpage', type: 'rss', domain: 'AI', credibility: 4 },
-  { name: 'Arxiv AI', url: 'http://export.arxiv.org/rss/cs.AI', type: 'rss', domain: 'AI', credibility: 5 },
-  { name: 'MIT Tech Review', url: 'https://www.technologyreview.com/feed/', type: 'rss', domain: 'AI', credibility: 5 },
-  { name: 'Next.js Blog', url: 'https://nextjs.org/feed.xml', type: 'rss', domain: 'FullStack', credibility: 5 },
-  { name: 'Node.js Blog', url: 'https://nodejs.org/en/feed/blog.xml', type: 'rss', domain: 'FullStack', credibility: 5 },
-  { name: 'Vercel Blog', url: 'https://vercel.com/atom', type: 'rss', domain: 'FullStack', credibility: 4 },
-  { name: '36氪', url: 'https://36kr.com/feed', type: 'rss', domain: 'Investment', credibility: 3 },
-  { name: '少数派', url: 'https://sspai.com/feed', type: 'rss', domain: 'Productivity', credibility: 4 },
-];
-
-// 添加 RSSHub 数据源（如果配置了）
-if (RSSHUB_BASE) {
-  RSS_SOURCES.push(
-    { name: '知乎热榜', url: `${RSSHUB_BASE}/zhihu/hot`, type: 'rsshub', domain: 'Hot', credibility: 3 },
-    { name: 'B站番剧排行', url: `${RSSHUB_BASE}/bilibili/ranking/1/3`, type: 'rsshub', domain: 'Entertainment', credibility: 3 }
-  );
-}
 
 interface ProfileData {
   telegram_bot_token: string | null;
@@ -60,51 +34,6 @@ async function sendWeComMessage(webhookUrl: string, text: string) {
   }, { headers: { 'Content-Type': 'application/json' } });
 }
 
-function generateId(link: string): string {
-  return createHash('md5').update(link).digest('hex').substring(0, 16);
-}
-
-async function collectData(): Promise<void> {
-  console.log('📡 采集数据中...');
-  
-  for (const source of RSS_SOURCES) {
-    try {
-      const feed = await parser.parseURL(source.url);
-      
-      for (const item of feed.items) {
-        const link = item.link || item.guid || '';
-        if (!link) continue;
-        
-        const exists = await supabaseAdmin
-          .from('info_items')
-          .select('id')
-          .eq('item_id', generateId(link))
-          .single();
-        
-        if (exists.data) continue;
-        
-        await supabaseAdmin.from('info_items').insert({
-          item_id: generateId(link),
-          title: item.title || 'Untitled',
-          link,
-          content: item.contentSnippet || item.content || '',
-          source: source.name,
-          domain: source.domain,
-          published_at: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
-          collected_at: new Date().toISOString(),
-          credibility_score: source.credibility,
-        });
-      }
-      
-      console.log(`  ✅ ${source.name}: ${feed.items.length} 条`);
-    } catch (error) {
-      console.error(`  ❌ ${source.name}:`, error instanceof Error ? error.message : error);
-    }
-  }
-  
-  console.log('📡 采集完成！');
-}
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -125,9 +54,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const channel = typeof req.query.channel === 'string' ? req.query.channel : null;
 
   try {
-    // 先采集最新数据
-    await collectData();
-
     // 获取用户配置
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('user_profiles')
