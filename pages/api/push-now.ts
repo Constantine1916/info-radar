@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
-import { DOMAINS, DOMAIN_CONFIG } from '../../lib/types';
+import { DOMAINS } from '../../lib/types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -107,11 +107,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'No items found. Try again later.' });
     }
 
-    // 生成消息
-    let message = `📡 *Info Radar 推送*\n📅 ${new Date().toISOString().split('T')[0]}\n\n`;
-    message += `━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-    message += `📊 为你精选 *${allItems.length}* 条最新信息\n\n`;
-
     // 按领域分组
     type InfoItemType = typeof allItems[0];
     const grouped = allItems.reduce((acc, item) => {
@@ -120,39 +115,64 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return acc;
     }, {} as Record<string, InfoItemType[]>);
 
+    // 生成 Telegram 消息（Markdown 格式）
+    let tgMessage = `📡 *Info Radar 推送*\n📅 ${new Date().toISOString().split('T')[0]}\n\n`;
+    tgMessage += `━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    tgMessage += `📊 为你精选 *${allItems.length}* 条最新信息\n\n`;
+
+    // 生成企微消息（HTML 格式，支持超链接）
+    let wecomMessage = `📡 <b>Info Radar 推送</b>\n📅 ${new Date().toISOString().split('T')[0]}\n\n`;
+    wecomMessage += `━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    wecomMessage += `📊 为你精选 <b>${allItems.length}</b> 条最新信息\n\n`;
+
     // 按订阅顺序输出
     for (const domain of domains) {
       const domainItems = grouped[domain];
       if (!domainItems || domainItems.length === 0) continue;
 
       const domainInfo = DOMAINS[domain as keyof typeof DOMAINS];
-      message += `${domainInfo.emoji} *${domainInfo.name}* (${domainItems.length})\n`;
-      message += `${'─'.repeat(30)}\n\n`;
+      
+      // Telegram 格式
+      tgMessage += `${domainInfo.emoji} *${domainInfo.name}* (${domainItems.length})\n`;
+      tgMessage += `${'─'.repeat(30)}\n\n`;
+      
+      // 企微格式
+      wecomMessage += `${domainInfo.emoji} <b>${domainInfo.name}</b> (${domainItems.length})\n`;
+      wecomMessage += `${'─'.repeat(30)}\n\n`;
 
       domainItems.slice(0, 5).forEach((item: any, i: number) => {
-        message += `${i + 1}. ${item.title.substring(0, 80)}${item.title.length > 80 ? '...' : ''}\n`;
-        message += `   🔗 ${item.link}\n`;
-        message += `   📍 ${item.source} | ⭐ ${item.credibility_score}/5\n\n`;
+        const title = item.title.substring(0, 80) + (item.title.length > 80 ? '...' : '');
+        
+        // Telegram: Markdown 链接格式
+        tgMessage += `${i + 1}. ${title}\n`;
+        tgMessage += `   🔗 [链接](${item.link})\n`;
+        tgMessage += `   📍 ${item.source} | ⭐ ${item.credibility_score}/5\n\n`;
+        
+        // 企微: HTML 链接格式
+        wecomMessage += `${i + 1}. ${title}\n`;
+        wecomMessage += `   🔗 <a href="${item.link}">${item.link}</a>\n`;
+        wecomMessage += `   📍 ${item.source} | ⭐ ${item.credibility_score}/5\n\n`;
       });
     }
 
-    message += `━━━━━━━━━━━━━━━━━━━━━━━━\n✅ by Info Radar`;
+    tgMessage += `━━━━━━━━━━━━━━━━━━━━━━━━\n✅ by Info Radar`;
+    wecomMessage += `━━━━━━━━━━━━━━━━━━━━━━━━\n✅ by Info Radar`;
 
     // 发送
     const results: string[] = [];
-    const shouldSendWeCom = !channel || channel === 'wecom';
-    const shouldSendTelegram = !channel || channel === 'telegram';
 
-    if (hasWeCom && shouldSendWeCom && profile.webhook_key) {
+    // 发送企微
+    if (hasWeCom && (!channel || channel === 'wecom') && profile.webhook_key) {
       const webhookUrl = profile.webhook_key.includes('key=') 
         ? profile.webhook_key 
         : `https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${profile.webhook_key}`;
-      await sendWeComMessage(webhookUrl, message);
+      await sendWeComMessage(webhookUrl, wecomMessage);
       results.push('WeCom');
     }
 
-    if (hasTelegram && shouldSendTelegram && profile.telegram_bot_token && profile.telegram_chat_id) {
-      await sendTelegramMessage(profile.telegram_bot_token, profile.telegram_chat_id, message);
+    // 发送 Telegram
+    if (hasTelegram && (!channel || channel === 'telegram') && profile.telegram_bot_token && profile.telegram_chat_id) {
+      await sendTelegramMessage(profile.telegram_bot_token, profile.telegram_chat_id, tgMessage);
       results.push('Telegram');
     }
 
