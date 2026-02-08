@@ -146,7 +146,62 @@ export default function Dashboard() {
     setSubscriptions(newSubs);
   };
 
+  const handlePushTelegram = async () => {
+    if (!supabase || !telegramStatus.verified) return;
+    
+    setPushing(true);
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+
+      const res = await fetch('/api/push-now?channel=telegram', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(`Telegram 推送成功！已发送 ${data.itemsCount} 条信息`);
+      } else {
+        alert(data.error || '推送失败');
+      }
+    } catch (error) {
+      alert('网络错误');
+    } finally {
+      setPushing(false);
+    }
+  };
+
+  const handlePushWeCom = async () => {
+    if (!supabase || !wecomStatus.hasWebhook) return;
+    
+    setPushing(true);
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+
+      const res = await fetch('/api/push-now?channel=wecom', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(`企业微信推送成功！已发送 ${data.itemsCount} 条信息`);
+      } else {
+        alert(data.error || '推送失败');
+      }
+    } catch (error) {
+      alert('网络错误');
+    } finally {
+      setPushing(false);
+    }
+  };
+
   const handlePushNow = async () => {
+    // 默认推送逻辑（两个都推）
     if (!supabase) return;
     
     setPushing(true);
@@ -235,7 +290,7 @@ export default function Dashboard() {
 
             {telegramStatus.verified ? (
               <div className="space-y-3">
-                <Button onClick={handlePushNow} disabled={pushing || subscriptions.length === 0} className="w-full shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                <Button onClick={handlePushTelegram} disabled={pushing || subscriptions.length === 0} className="w-full shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all">
                   {pushing ? '推送中...' : '立即推送'}
                 </Button>
                 <Button variant="outline" onClick={handleUnbind} className="w-full hover:bg-gray-50">
@@ -266,7 +321,7 @@ export default function Dashboard() {
             {wecomStatus.hasWebhook ? (
               <div className="space-y-3">
                 <Button 
-                  onClick={handlePushNow} 
+                  onClick={handlePushWeCom} 
                   disabled={pushing || subscriptions.length === 0} 
                   className="w-full bg-green-500 hover:bg-green-600 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
                 >

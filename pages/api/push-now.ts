@@ -59,6 +59,9 @@ export default async function handler(
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  // Get channel from query param
+  const channel = typeof req.query.channel === 'string' ? req.query.channel : null;
+
   try {
     // Get user's profile
     const { data: profile, error: profileError } = await supabaseAdmin
@@ -151,10 +154,15 @@ export default async function handler(
     message += `━━━━━━━━━━━━━━━━━━━━━━━━\n`;
     message += `✅ by Info Radar`;
 
-    // Send to configured channels
+    // Send to specified channel only, or all configured channels
     const results: string[] = [];
 
-    if (hasWeCom) {
+    // Check which channels should receive the push
+    const shouldSendWeCom = !channel || channel === 'wecom';
+    const shouldSendTelegram = !channel || channel === 'telegram';
+
+    // Send to WeCom
+    if (hasWeCom && shouldSendWeCom) {
       const webhookUrl = profile.webhook_key!.includes('key=') 
         ? profile.webhook_key 
         : `https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${profile.webhook_key}`;
@@ -162,7 +170,8 @@ export default async function handler(
       results.push('WeCom');
     }
 
-    if (hasTelegram) {
+    // Send to Telegram
+    if (hasTelegram && shouldSendTelegram) {
       await sendTelegramMessage(profile.telegram_bot_token!, profile.telegram_chat_id!, message);
       results.push('Telegram');
     }
