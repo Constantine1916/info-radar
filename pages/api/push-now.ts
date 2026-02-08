@@ -81,61 +81,65 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const domains = subs.map(s => s.domain);
 
-    // 从数据库获取数据（最近24小时，提高 limit 确保各领域都有数据）
+    // 从数据库获取数据（最近24小时，每个领域取前5条）
     const yesterday = new Date();
     yesterday.setHours(yesterday.getHours() - 24);
 
-    const { data: allItems } = await supabaseAdmin
-      .from('info_items')
-      .select('*')
-      .in('domain', domains)
-      .gte('collected_at', yesterday.toISOString())
-      .order('credibility_score', { ascending: false })
-      .limit(200);
+    const allItems: any[] = [];
+    let hasData = false;
 
-    if (!allItems || allItems.length === 0) {
-      return res.status(404).json({ error: 'No items found. Try again later.' });
-    }
+    for (const domain of domains) {
+      const config = DOMAIN_CONFIG[domain as keyof typeof DOMAIN_CONFIG];
+      const maxItems = config?.maxItems || 5;
+      const minCredibility = config?.minCredibility || 1;
 
-    // 过滤
-    const filteredItems: typeof allItems = [];
-    const domainItemCount: Record<string, number> = {};
+      const { data: items } = await supabaseAdmin
+        .from('info_items')
+        .select('*')
+        .eq('domain', domain)
+        .gte('collected_at', yesterday.toISOString())
+        .gte('credibility_score', minCredibility)
+        .order('credibility_score', { ascending: false })
+        .limit(maxItems);
 
-    for (const item of allItems) {
-      const config = DOMAIN_CONFIG[item.domain as keyof typeof DOMAIN_CONFIG];
-      const currentCount = domainItemCount[item.domain] || 0;
-      if (config && currentCount < config.maxItems && item.credibility_score >= config.minCredibility) {
-        filteredItems.push(item);
-        domainItemCount[item.domain] = currentCount + 1;
+      if (items && items.length > 0) {
+        hasData = true;
+        allItems.push(...items);
       }
     }
 
-    if (filteredItems.length === 0) {
-      return res.status(404).json({ error: 'No items meet quality criteria' });
+    if (!hasData || allItems.length === 0) {
+      return res.status(404).json({ error: 'No items found. Try again later.' });
     }
 
     // 生成消息
     let message = `📡 *Info Radar 推送*\n📅 ${new Date().toISOString().split('T')[0]}\n\n`;
     message += `━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-    message += `📊 为你精选 *${filteredItems.length}* 条最新信息\n\n`;
+    message += `📊 为你精选 *${allItems.length}* 条最新信息\n\n`;
 
-    type InfoItemType = typeof filteredItems[0];
-    const grouped = filteredItems.reduce((acc, item) => {
+    // 按领域分组
+    type InfoItemType = typeof allItems[0];
+    const grouped = allItems.reduce((acc, item) => {
       if (!acc[item.domain]) acc[item.domain] = [];
       acc[item.domain].push(item);
       return acc;
     }, {} as Record<string, InfoItemType[]>);
 
-    (Object.entries(grouped) as [string, InfoItemType[]][]).forEach(([domain, domainItems]) => {
+    // 按订阅顺序输出
+    for (const domain of domains) {
+      const domainItems = grouped[domain];
+      if (!domainItems || domainItems.length === 0) continue;
+
       const domainInfo = DOMAINS[domain as keyof typeof DOMAINS];
       message += `${domainInfo.emoji} *${domainInfo.name}* (${domainItems.length})\n`;
       message += `${'─'.repeat(30)}\n\n`;
-      domainItems.slice(0, 3).forEach((item, i) => {
-        message += `${i + 1}. ${item.title.substring(0, 80)}...\n`;
+
+      domainItems.slice(0, 5).forEach((item, i) => {
+        message += `${i + 1}. ${item.title.substring(0, 80)}${item.title.length > 80 ? '...' : ''}\n`;
         message += `   🔗 ${item.link}\n`;
         message += `   📍 ${item.source} | ⭐ ${item.credibility_score}/5\n\n`;
       });
-    });
+    }
 
     message += `━━━━━━━━━━━━━━━━━━━━━━━━\n✅ by Info Radar`;
 
@@ -163,14 +167,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     await supabaseAdmin.from('push_history').insert({
       user_id: user.id,
-      items_count: filteredItems.length,
+      items_count: allItems.length,
       domains,
       success: true,
     });
 
     return res.status(200).json({
       success: true,
-      itemsCount: filteredItems.length,
+      itemsCount: allItems.length,
+      domains: domains.filter(d => grouped[d]?.length > 0),
       channels: results,
     });
   } catch (error) {
