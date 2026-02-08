@@ -7,8 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "collect": "tsx src/index.ts",
-    "local": "tsx src/index.ts",
+    "collect": "tsx scripts/local-collect.ts",
+    "local": "tsx scripts/local-collect.ts",
     "test": "echo \"Testing coming soon\""
   },
   "keywords": [
