@@ -155,7 +155,7 @@ export default async function handler(
           wecomMessage += `${domainInfo.emoji} **${domainInfo.name}** (${domainItems.length})\n`;
           wecomMessage += `${'─'.repeat(30)}\n\n`;
 
-          domainItems.slice(0, 5).forEach((item, i) => {
+          domainItems.slice(0, 5).forEach((item: any, i: number) => {
             const title = item.title.substring(0, 80) + (item.title.length > 80 ? '...' : '');
             
             // Telegram: HTML link
