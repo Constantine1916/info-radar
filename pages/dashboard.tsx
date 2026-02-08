@@ -200,34 +200,6 @@ export default function Dashboard() {
     }
   };
 
-  const handlePushNow = async () => {
-    // 默认推送逻辑（两个都推）
-    if (!supabase) return;
-    
-    setPushing(true);
-    try {
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
-
-      const res = await fetch('/api/push-now', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        alert(`推送成功！已发送 ${data.itemsCount} 条信息`);
-      } else {
-        alert(data.error || '推送失败');
-      }
-    } catch (error) {
-      alert('网络错误');
-    } finally {
-      setPushing(false);
-    }
-  };
-
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#fafafa]">
