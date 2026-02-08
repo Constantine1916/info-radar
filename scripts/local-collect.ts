@@ -2,7 +2,7 @@
 import 'dotenv/config';
 import Parser from 'rss-parser';
 import { createHash } from 'crypto';
-import { DOMAINS, DOMAIN_CONFIG, DataSource } from './lib/types';
+import { DOMAINS, DOMAIN_CONFIG, DataSource } from '../lib/types';
 
 const parser = new Parser({ timeout: 10000 }); // 10秒超时
 
