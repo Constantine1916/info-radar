@@ -22,7 +22,9 @@ export interface Subscription {
     | 'Crypto'
     | 'Product'
     | 'Design'
-    | 'Productivity';
+    | 'Productivity'
+    | 'Hot'
+    | 'Entertainment';
   enabled: boolean;
   created_at: string;
 }
@@ -58,7 +60,9 @@ export const DOMAINS = {
   Crypto: { name: 'Crypto / Web3', emoji: '₿', description: '区块链、加密货币、DeFi、NFT' },
   Product: { name: '产品经理', emoji: '📦', description: '产品设计、增长策略、用户研究' },
   Design: { name: '设计 / 视觉', emoji: '🎨', description: 'UI/UX设计、设计系统、创意趋势' },
-  Productivity: { name: '效率工具', emoji: '⚡', description: '生产力工具、时间管理、自动化' }
+  Productivity: { name: '效率工具', emoji: '⚡', description: '生产力工具、时间管理、自动化' },
+  Hot: { name: '热点榜单', emoji: '🔥', description: '知乎、B站等热点内容' },
+  Entertainment: { name: '娱乐内容', emoji: '🎬', description: '番剧、动漫、游戏等娱乐内容' }
 } as const;
 
 export const DOMAIN_CONFIG = {
@@ -70,5 +74,7 @@ export const DOMAIN_CONFIG = {
   Crypto: { maxItems: 3, minCredibility: 3 },
   Product: { maxItems: 3, minCredibility: 3 },
   Design: { maxItems: 3, minCredibility: 3 },
-  Productivity: { maxItems: 3, minCredibility: 3 }
+  Productivity: { maxItems: 3, minCredibility: 3 },
+  Hot: { maxItems: 5, minCredibility: 2 },
+  Entertainment: { maxItems: 5, minCredibility: 2 }
 } as const;

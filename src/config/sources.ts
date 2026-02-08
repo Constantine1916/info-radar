@@ -1,5 +1,8 @@
 import { DataSource } from '../types';
 
+// RSSHub 服务地址（本地或远程）
+const RSSHUB_BASE = process.env.RSSHUB_URL || 'http://localhost:1200';
+
 export const RSS_SOURCES: DataSource[] = [
   // AI/技术趋势
   {
@@ -9,14 +12,6 @@ export const RSS_SOURCES: DataSource[] = [
     domain: 'AI',
     credibility: 4
   },
-  // OpenAI Blog - 暂时禁用（403 Forbidden）
-  // {
-  //   name: 'OpenAI Blog',
-  //   url: 'https://openai.com/blog/rss/',
-  //   type: 'rss',
-  //   domain: 'AI',
-  //   credibility: 5
-  // },
   {
     name: 'Arxiv AI',
     url: 'http://export.arxiv.org/rss/cs.AI',
@@ -47,7 +42,6 @@ export const RSS_SOURCES: DataSource[] = [
     domain: 'FullStack',
     credibility: 5
   },
-  // Vercel Blog - URL 已失效，替换为新地址
   {
     name: 'Vercel Blog',
     url: 'https://vercel.com/atom',
@@ -55,22 +49,6 @@ export const RSS_SOURCES: DataSource[] = [
     domain: 'FullStack',
     credibility: 4
   },
-  
-  // 世界局势/政治 - 已取消订阅
-  // {
-  //   name: 'BBC News',
-  //   url: 'http://feeds.bbci.co.uk/news/world/rss.xml',
-  //   type: 'rss',
-  //   domain: 'WorldPolitics',
-  //   credibility: 5
-  // },
-  // {
-  //   name: 'The Guardian World',
-  //   url: 'https://www.theguardian.com/world/rss',
-  //   type: 'rss',
-  //   domain: 'WorldPolitics',
-  //   credibility: 5
-  // },
   
   // 投资/创业
   {
@@ -88,5 +66,21 @@ export const RSS_SOURCES: DataSource[] = [
     type: 'rss',
     domain: 'Productivity',
     credibility: 4
+  },
+
+  // RSSHub 数据源（本地服务）
+  {
+    name: '知乎热榜',
+    url: `${RSSHUB_BASE}/zhihu/hot`,
+    type: 'rsshub',
+    domain: 'Hot',
+    credibility: 3
+  },
+  {
+    name: 'B站番剧排行',
+    url: `${RSSHUB_BASE}/bilibili/ranking/1/3`,
+    type: 'rsshub',
+    domain: 'Entertainment',
+    credibility: 3
   }
 ];
