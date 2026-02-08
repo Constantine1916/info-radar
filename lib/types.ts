@@ -78,3 +78,11 @@ export const DOMAIN_CONFIG = {
   Hot: { maxItems: 5, minCredibility: 2 },
   Entertainment: { maxItems: 5, minCredibility: 2 }
 } as const;
+
+export interface DataSource {
+  name: string;
+  url: string;
+  type: 'rss' | 'api' | 'crawler' | 'rsshub';
+  domain: string;
+  credibility: number;
+}
