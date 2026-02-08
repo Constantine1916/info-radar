@@ -21,10 +21,13 @@ const RSS_SOURCES = [
 ];
 
 // RSSHub 数据源（如果配置了）
-if (process.env.RSSHUB_URL) {
+// 默认使用 rsshub.umzzz.com (已验证可用)
+const RSSHUB_BASE = process.env.RSSHUB_URL || 'https://rsshub.umzzz.com';
+
+if (RSSHUB_BASE) {
   RSS_SOURCES.push(
-    { name: '知乎热榜', url: `${process.env.RSSHUB_URL}/zhihu/hot`, type: 'rsshub', domain: 'Hot', credibility: 3 },
-    { name: 'B站番剧排行', url: `${process.env.RSSHUB_URL}/bilibili/ranking/1/3`, type: 'rsshub', domain: 'Entertainment', credibility: 3 }
+    { name: '知乎热榜', url: `${RSSHUB_BASE}/zhihu/hot`, type: 'rsshub', domain: 'Hot', credibility: 3 },
+    { name: 'B站番剧排行', url: `${RSSHUB_BASE}/bilibili/ranking/1/3`, type: 'rsshub', domain: 'Entertainment', credibility: 3 }
   );
 }
 
