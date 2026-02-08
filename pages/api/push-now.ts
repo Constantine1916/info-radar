@@ -129,7 +129,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       message += `${domainInfo.emoji} *${domainInfo.name}* (${domainItems.length})\n`;
       message += `${'─'.repeat(30)}\n\n`;
 
-      domainItems.slice(0, 5).forEach((item, i) => {
+      domainItems.slice(0, 5).forEach((item: any, i: number) => {
         message += `${i + 1}. ${item.title.substring(0, 80)}${item.title.length > 80 ? '...' : ''}\n`;
         message += `   🔗 ${item.link}\n`;
         message += `   📍 ${item.source} | ⭐ ${item.credibility_score}/5\n\n`;
