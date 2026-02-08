@@ -40,10 +40,15 @@ export default async function handler(
       }
 
       // Delete all existing subscriptions
-      await supabaseAdmin
+      const { error: deleteError } = await supabaseAdmin
         .from('subscriptions')
         .delete()
         .eq('user_id', user.id);
+
+      if (deleteError) {
+        console.error('Error deleting subscriptions:', deleteError);
+        return res.status(500).json({ error: 'Failed to delete subscriptions' });
+      }
 
       // Insert new subscriptions
       if (domains.length > 0) {
@@ -59,7 +64,7 @@ export default async function handler(
 
         if (insertError) {
           console.error('Error inserting subscriptions:', insertError);
-          return res.status(500).json({ error: 'Failed to update subscriptions' });
+          return res.status(500).json({ error: 'Failed to insert subscriptions' });
         }
       }
 

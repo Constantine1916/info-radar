@@ -124,7 +124,7 @@ export default function Dashboard() {
     const session = await supabase.auth.getSession();
     const token = session.data.session?.access_token;
 
-    await fetch('/api/subscriptions', {
+    const res = await fetch('/api/subscriptions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -133,8 +133,14 @@ export default function Dashboard() {
       body: JSON.stringify({ domains }),
     });
 
-    setSubscriptions(domains);
-    alert('订阅配置已保存！');
+    const data = await res.json();
+
+    if (res.ok) {
+      setSubscriptions(domains);
+      alert('订阅配置已保存！');
+    } else {
+      alert(data.error || '保存失败');
+    }
   };
 
   const handleUnbind = async () => {
