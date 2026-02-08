@@ -48,19 +48,31 @@ async function main() {
   const digestGen = new DigestGenerator();
   const digest = digestGen.generate(grouped);
   
-  // 步骤5: 推送到企业微信（如果配置了）
+  // 步骤5: 推送到配置的平台
   const wecomKey = process.env.WEBHOOK_KEY;
   const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
+  const telegramChatId = process.env.TELEGRAM_CHAT_ID;
   
+  let sent = false;
+  
+  // 企业微信
   if (wecomKey) {
     console.log('📱 Sending to WeCom...\n');
     const wecom = new WeComNotifier();
     await wecom.sendLong(digest);
-  } else if (telegramToken) {
+    sent = true;
+  }
+  
+  // Telegram
+  if (telegramToken && telegramChatId) {
     console.log('📱 Sending to Telegram...\n');
     const telegram = new TelegramNotifier();
     await telegram.sendLong(digest);
-  } else {
+    sent = true;
+  }
+  
+  // 都没配置
+  if (!sent) {
     console.log('📱 [NO NOTIFICATION CONFIGURED]');
     console.log('Add WEBHOOK_KEY or TELEGRAM credentials to .env\n');
     console.log(digest);

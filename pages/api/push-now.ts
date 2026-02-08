@@ -10,12 +10,31 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
+interface ProfileData {
+  telegram_bot_token: string | null;
+  telegram_chat_id: string | null;
+  telegram_verified: boolean | null;
+  webhook_key: string | null;
+  webhook_enabled: boolean | null;
+}
+
 async function sendTelegramMessage(botToken: string, chatId: string, text: string) {
   await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     chat_id: chatId,
     text,
     parse_mode: 'Markdown',
     disable_web_page_preview: true,
+  });
+}
+
+async function sendWeComMessage(webhookUrl: string, text: string) {
+  await axios.post(webhookUrl, {
+    msgtype: 'markdown',
+    markdown: {
+      content: text,
+    },
+  }, {
+    headers: { 'Content-Type': 'application/json' },
   });
 }
 
@@ -44,17 +63,17 @@ export default async function handler(
     // Get user's profile
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('user_profiles')
-      .select('telegram_bot_token, telegram_chat_id, telegram_verified')
+      .select('telegram_bot_token, telegram_chat_id, telegram_verified, webhook_key, webhook_enabled')
       .eq('id', user.id)
-      .single();
+      .single<ProfileData>();
 
     if (profileError || !profile) {
       return res.status(400).json({ error: 'Profile not found' });
     }
 
-    if (!profile.telegram_verified || !profile.telegram_bot_token || !profile.telegram_chat_id) {
-      return res.status(400).json({ error: 'Telegram bot not configured. Please go to Settings.' });
-    }
+    // Check which channels are configured
+    const hasTelegram = profile.telegram_verified && profile.telegram_bot_token && profile.telegram_chat_id;
+    const hasWeCom = profile.webhook_enabled && profile.webhook_key;
 
     // Get user's subscriptions
     const { data: subs } = await supabaseAdmin
@@ -64,7 +83,7 @@ export default async function handler(
       .eq('enabled', true);
 
     if (!subs || subs.length === 0) {
-      return res.status(400).json({ error: 'No active subscriptions' });
+      return res.status(400).json({ error: 'No active subscriptions. Please configure your subscriptions first.' });
     }
 
     const domains = subs.map(s => s.domain);
@@ -82,7 +101,7 @@ export default async function handler(
       .limit(100);
 
     if (!allItems || allItems.length === 0) {
-      return res.status(404).json({ error: 'No recent items found' });
+      return res.status(404).json({ error: 'No recent items found. Try again later.' });
     }
 
     // Filter and limit items per domain
@@ -104,7 +123,7 @@ export default async function handler(
     }
 
     // Generate message
-    let message = `📡 *Info Radar 手动推送*\n`;
+    let message = `📡 *Info Radar 推送*\n`;
     message += `📅 ${new Date().toISOString().split('T')[0]}\n\n`;
     message += `━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
     message += `📊 为你精选 *${filteredItems.length}* 条最新信息\n\n`;
@@ -130,10 +149,31 @@ export default async function handler(
     });
 
     message += `━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    message += `✅ 手动推送 | 💡 by Info Radar`;
+    message += `✅ by Info Radar`;
 
-    // Send to Telegram
-    await sendTelegramMessage(profile.telegram_bot_token, profile.telegram_chat_id, message);
+    // Send to configured channels
+    const results: string[] = [];
+
+    if (hasWeCom) {
+      const webhookUrl = profile.webhook_key!.includes('key=') 
+        ? profile.webhook_key 
+        : `https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${profile.webhook_key}`;
+      await sendWeComMessage(webhookUrl, message);
+      results.push('WeCom');
+    }
+
+    if (hasTelegram) {
+      await sendTelegramMessage(profile.telegram_bot_token!, profile.telegram_chat_id!, message);
+      results.push('Telegram');
+    }
+
+    // If no channels configured
+    if (results.length === 0) {
+      return res.status(400).json({ 
+        error: 'No notification channels configured',
+        hint: 'Please configure Telegram or WeCom webhook in Settings'
+      });
+    }
 
     // Record push history
     await supabaseAdmin.from('push_history').insert({
@@ -146,7 +186,8 @@ export default async function handler(
     return res.status(200).json({
       success: true,
       itemsCount: filteredItems.length,
-      message: 'Push sent successfully',
+      channels: results,
+      message: `Push sent to ${results.join(', ')}`,
     });
   } catch (error) {
     console.error('Push error:', error);
