@@ -1,7 +1,7 @@
 import { DataSource } from '../types';
 
 // RSSHub 服务地址（本地或远程）
-const RSSHUB_BASE = process.env.RSSHUB_URL || 'http://localhost:1200';
+const RSSHUB_BASE = process.env.RSSHUB_URL || 'https://hub.slarker.me';
 
 export const RSS_SOURCES: DataSource[] = [
   // AI/技术趋势
