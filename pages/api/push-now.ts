@@ -81,7 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const domains = subs.map(s => s.domain);
 
-    // 从数据库获取数据（最近24小时）
+    // 从数据库获取数据（最近24小时，提高 limit 确保各领域都有数据）
     const yesterday = new Date();
     yesterday.setHours(yesterday.getHours() - 24);
 
@@ -91,7 +91,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .in('domain', domains)
       .gte('collected_at', yesterday.toISOString())
       .order('credibility_score', { ascending: false })
-      .limit(100);
+      .limit(200);
 
     if (!allItems || allItems.length === 0) {
       return res.status(404).json({ error: 'No items found. Try again later.' });
