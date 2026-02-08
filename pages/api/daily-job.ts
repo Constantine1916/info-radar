@@ -75,12 +75,11 @@ export default async function handler(
     // Step 2: Push to users
     console.log('📱 Step 2: Pushing to users...');
     try {
-      // Get all verified users with subscriptions
+      // Get all users with at least one configured channel (Telegram OR WeCom)
       const { data: profiles, error: profileError } = await supabaseAdmin
         .from('user_profiles')
         .select('id, telegram_bot_token, telegram_chat_id, telegram_verified, webhook_key, webhook_enabled')
-        .eq('telegram_verified', true)
-        .or(`webhook_enabled.eq.true, webhook_key.not.is.null`);
+        .or(`telegram_verified.eq.true, and(webhook_enabled.eq.true, webhook_key.not.is.null)`);
 
       if (profileError || !profiles) {
         throw new Error('Failed to fetch users');
