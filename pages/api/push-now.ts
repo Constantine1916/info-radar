@@ -81,7 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const domains = subs.map(s => s.domain);
 
-    // 从数据库获取数据（最近24小时，每个领域取前5条）
+    // 从数据库获取数据（最近24小时，每个领域统一取前5条）
     const yesterday = new Date();
     yesterday.setHours(yesterday.getHours() - 24);
 
@@ -89,18 +89,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let hasData = false;
 
     for (const domain of domains) {
-      const config = DOMAIN_CONFIG[domain as keyof typeof DOMAIN_CONFIG];
-      const maxItems = config?.maxItems || 5;
-      const minCredibility = config?.minCredibility || 1;
-
       const { data: items } = await supabaseAdmin
         .from('info_items')
         .select('*')
         .eq('domain', domain)
         .gte('collected_at', yesterday.toISOString())
-        .gte('credibility_score', minCredibility)
         .order('credibility_score', { ascending: false })
-        .limit(maxItems);
+        .limit(5);
 
       if (items && items.length > 0) {
         hasData = true;
