@@ -104,22 +104,34 @@ export default async function handler(
 
         const domains = subs.map(s => s.domain);
 
-        // Get recent items for subscribed domains (last 24 hours)
+        // Get recent items for each domain (last 24 hours, 5 items per domain)
         const yesterday = new Date();
         yesterday.setHours(yesterday.getHours() - 24);
 
-        const { data: items } = await supabaseAdmin
-          .from('info_items')
-          .select('*')
-          .in('domain', domains)
-          .gte('collected_at', yesterday.toISOString())
-          .order('credibility_score', { ascending: false })
-          .limit(20);
+        const allItems: any[] = [];
+        let hasData = false;
 
-        if (!items || items.length === 0) {
+        for (const domain of domains) {
+          const { data: items } = await supabaseAdmin
+            .from('info_items')
+            .select('*')
+            .eq('domain', domain)
+            .gte('collected_at', yesterday.toISOString())
+            .order('credibility_score', { ascending: false })
+            .limit(5);
+
+          if (items && items.length > 0) {
+            hasData = true;
+            allItems.push(...items);
+          }
+        }
+
+        if (!hasData || allItems.length === 0) {
           skippedCount++;
           continue;
         }
+
+        const items = allItems;
 
         // Build messages
         const dateStr = new Date().toISOString().split('T')[0];
