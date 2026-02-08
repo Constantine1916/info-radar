@@ -14,7 +14,7 @@ export interface InfoItem {
 export interface DataSource {
   name: string;
   url: string;
-  type: 'rss' | 'api' | 'crawler';
+  type: 'rss' | 'api' | 'crawler' | 'rsshub';
   domain: string;
   credibility: number; // 1-5
 }
