@@ -115,14 +115,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return acc;
     }, {} as Record<string, InfoItemType[]>);
 
-    // 生成通用消息内容
     const date = new Date().toISOString().split('T')[0];
     const totalCount = allItems.length;
 
-    // 构建消息
-    let message = `📡 Info Radar 推送\n📅 ${date}\n\n`;
-    message += `━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-    message += `📊 为你精选 ${totalCount} 条最新信息\n\n`;
+    // 构建 Telegram 消息（Markdown 格式）
+    let tgMessage = `📡 *Info Radar 推送*\n📅 ${date}\n\n`;
+    tgMessage += `━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    tgMessage += `📊 为你精选 *${totalCount}* 条最新信息\n\n`;
+
+    // 构建企微消息（Markdown 格式，超链接用 <a> 标签）
+    let wecomMessage = `📡 <b>Info Radar 推送</b>\n📅 ${date}\n\n`;
+    wecomMessage += `━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    wecomMessage += `📊 为你精选 <b>${totalCount}</b> 条最新信息\n\n`;
 
     // 按订阅顺序输出
     for (const domain of domains) {
@@ -130,35 +134,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!domainItems || domainItems.length === 0) continue;
 
       const domainInfo = DOMAINS[domain as keyof typeof DOMAINS];
-      message += `${domainInfo.emoji} ${domainInfo.name} (${domainItems.length})\n`;
-      message += `${'─'.repeat(30)}\n\n`;
+      
+      // Telegram
+      tgMessage += `${domainInfo.emoji} *${domainInfo.name}* (${domainItems.length})\n`;
+      tgMessage += `${'─'.repeat(30)}\n\n`;
+      
+      // 企微
+      wecomMessage += `${domainInfo.emoji} <b>${domainInfo.name}</b> (${domainItems.length})\n`;
+      wecomMessage += `${'─'.repeat(30)}\n\n`;
 
       domainItems.slice(0, 5).forEach((item: any, i: number) => {
         const title = item.title.substring(0, 80) + (item.title.length > 80 ? '...' : '');
-        message += `${i + 1}. ${title}\n`;
-        message += `   🔗 ${item.link}\n`;
-        message += `   📍 ${item.source} | ⭐ ${item.credibility_score}/5\n\n`;
+        
+        // Telegram: Markdown 链接格式
+        tgMessage += `${i + 1}. ${title}\n`;
+        tgMessage += `   🔗 [链接](${item.link})\n`;
+        tgMessage += `   📍 ${item.source} | ⭐ ${item.credibility_score}/5\n\n`;
+        
+        // 企微: HTML 链接格式 <a href="url">链接文字</a>
+        wecomMessage += `${i + 1}. ${title}\n`;
+        wecomMessage += `   🔗 <a href="${item.link}">🔗 链接</a>\n`;
+        wecomMessage += `   📍 ${item.source} | ⭐ ${item.credibility_score}/5\n\n`;
       });
     }
 
-    message += `━━━━━━━━━━━━━━━━━━━━━━━━\n✅ by Info Radar`;
+    tgMessage += `━━━━━━━━━━━━━━━━━━━━━━━━\n✅ by Info Radar`;
+    wecomMessage += `━━━━━━━━━━━━━━━━━━━━━━━━\n✅ by Info Radar`;
 
     // 发送
     const results: string[] = [];
 
-    // 企微：使用纯文本消息
+    // 企微
     if (hasWeCom && (!channel || channel === 'wecom') && profile.webhook_key) {
       const webhookUrl = profile.webhook_key.includes('key=') 
         ? profile.webhook_key 
         : `https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${profile.webhook_key}`;
-      await sendWeComMessage(webhookUrl, message);
+      await sendWeComMessage(webhookUrl, wecomMessage);
       results.push('WeCom');
     }
 
-    // Telegram：使用 Markdown 格式（需要转义）
+    // Telegram
     if (hasTelegram && (!channel || channel === 'telegram') && profile.telegram_bot_token && profile.telegram_chat_id) {
-      // Telegram Markdown 需要转义特殊字符
-      const tgMessage = message
+      const tgMessageEscaped = tgMessage
         .replace(/_/g, '\\_')
         .replace(/\*/g, '\\*')
         .replace(/\[/g, '\\[')
@@ -166,7 +183,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .replace(/\(/g, '\\(')
         .replace(/\)/g, '\\)')
         .replace(/`/g, '\\`');
-      await sendTelegramMessage(profile.telegram_bot_token, profile.telegram_chat_id, tgMessage);
+      await sendTelegramMessage(profile.telegram_bot_token, profile.telegram_chat_id, tgMessageEscaped);
       results.push('Telegram');
     }
 
