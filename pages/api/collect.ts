@@ -64,7 +64,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // 并行采集（最多5个同时）
+    // 并行采集
     const BATCH_SIZE = 5;
     const results: any[] = [];
     const allItems: any[] = [];
@@ -83,18 +83,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // 去重并插入数据库
-    let inserted = 0;
-    for (const item of allItems) {
-      const { data: exists } = await supabaseAdmin
+    // 批量查询已存在的 item_id（只查一次）
+    const itemIds = allItems.map(item => item.item_id);
+    const { data: existingItems } = await supabaseAdmin
+      .from('info_items')
+      .select('item_id')
+      .in('item_id', itemIds);
+
+    const existingIds = new Set(existingItems?.map(item => item.item_id) || []);
+
+    // 只插入不存在的
+    const newItems = allItems.filter(item => !existingIds.has(item.item_id));
+    
+    if (newItems.length > 0) {
+      const { error: insertError } = await supabaseAdmin
         .from('info_items')
-        .select('id')
-        .eq('item_id', item.item_id)
-        .single();
-      
-      if (!exists) {
-        await supabaseAdmin.from('info_items').insert(item);
-        inserted++;
+        .insert(newItems.slice(0, 100)); // 限制单次插入条数
+
+      if (insertError) {
+        console.error('Insert error:', insertError);
       }
     }
 
@@ -106,7 +113,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       successCount,
       failed: results.length - successCount,
       collected: allItems.length,
-      inserted,
+      existing: existingIds.size,
+      inserted: newItems.length,
       time: results.reduce((sum, r) => sum + r.time, 0),
     });
   } catch (error) {
