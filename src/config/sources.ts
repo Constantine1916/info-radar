@@ -3,6 +3,18 @@ import { DataSource } from '../types';
 // RSSHub 服务地址（需要配置环境变量 RSSHUB_URL）
 const RSSHUB_BASE = process.env.RSSHUB_URL;
 
+// 辅助函数：安全创建 DataSource（只在 RSSHUB_URL 存在时创建）
+function createRSSHubSource(name: string, url: string, domain: string, credibility: number): DataSource | null {
+  if (!RSSHUB_BASE) return null;
+  return {
+    name,
+    url: `${RSSHUB_BASE}${url}`,
+    type: 'rsshub',
+    domain,
+    credibility
+  };
+}
+
 export const RSS_SOURCES: DataSource[] = [
   // AI/技术趋势
   {
@@ -69,20 +81,6 @@ export const RSS_SOURCES: DataSource[] = [
   },
 
   // RSSHub 数据源（如果配置了 RSSHUB_URL）
-  ...(RSSHUB_BASE ? [
-    {
-      name: '知乎热榜',
-      url: `${RSSHUB_BASE}/zhihu/hot`,
-      type: 'rsshub',
-      domain: 'Hot',
-      credibility: 3
-    },
-    {
-      name: 'B站番剧排行',
-      url: `${RSSHUB_BASE}/bilibili/ranking/1/3`,
-      type: 'rsshub',
-      domain: 'Entertainment',
-      credibility: 3
-    }
-  ] : [])
-];
+  ...(createRSSHubSource('知乎热榜', '/zhihu/hot', 'Hot', 3) ? [createRSSHubSource('知乎热榜', '/zhihu/hot', 'Hot', 3)!] : []),
+  ...(createRSSHubSource('B站番剧排行', '/bilibili/ranking/1/3', 'Entertainment', 3) ? [createRSSHubSource('B站番剧排行', '/bilibili/ranking/1/3', 'Entertainment', 3)!] : [])
+].filter((s): s is DataSource => s !== null);
