@@ -14,8 +14,8 @@ export default function Dashboard() {
   const [subscriptions, setSubscriptions] = useState<string[]>([]);
   const [telegramStatus, setTelegramStatus] = useState<{ verified: boolean; chatId?: string }>({ verified: false });
   const [wecomStatus, setWecomStatus] = useState<{ hasWebhook: boolean; enabled?: boolean }>({ hasWebhook: false });
-  const [verificationCode, setVerificationCode] = useState('');
-  const [pushing, setPushing] = useState(false);
+  const [pushingTelegram, setPushingTelegram] = useState(false);
+  const [pushingWeCom, setPushingWeCom] = useState(false);
   const fetchStartedRef = useRef(false);
 
   useEffect(() => {
@@ -149,7 +149,7 @@ export default function Dashboard() {
   const handlePushTelegram = async () => {
     if (!supabase || !telegramStatus.verified) return;
     
-    setPushing(true);
+    setPushingTelegram(true);
     try {
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
@@ -169,14 +169,14 @@ export default function Dashboard() {
     } catch (error) {
       alert('网络错误');
     } finally {
-      setPushing(false);
+      setPushingTelegram(false);
     }
   };
 
   const handlePushWeCom = async () => {
     if (!supabase || !wecomStatus.hasWebhook) return;
     
-    setPushing(true);
+    setPushingWeCom(true);
     try {
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
@@ -196,7 +196,7 @@ export default function Dashboard() {
     } catch (error) {
       alert('网络错误');
     } finally {
-      setPushing(false);
+      setPushingWeCom(false);
     }
   };
 
@@ -290,8 +290,12 @@ export default function Dashboard() {
 
             {telegramStatus.verified ? (
               <div className="space-y-3">
-                <Button onClick={handlePushTelegram} disabled={pushing || subscriptions.length === 0} className="w-full shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all">
-                  {pushing ? '推送中...' : '立即推送'}
+                <Button 
+                  onClick={handlePushTelegram} 
+                  disabled={pushingTelegram || subscriptions.length === 0} 
+                  className="w-full shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
+                >
+                  {pushingTelegram ? '推送中...' : '立即推送'}
                 </Button>
                 <Button variant="outline" onClick={handleUnbind} className="w-full hover:bg-gray-50">
                   管理配置
@@ -322,10 +326,10 @@ export default function Dashboard() {
               <div className="space-y-3">
                 <Button 
                   onClick={handlePushWeCom} 
-                  disabled={pushing || subscriptions.length === 0} 
+                  disabled={pushingWeCom || subscriptions.length === 0} 
                   className="w-full bg-green-500 hover:bg-green-600 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
                 >
-                  {pushing ? '推送中...' : '立即推送'}
+                  {pushingWeCom ? '推送中...' : '立即推送'}
                 </Button>
                 <Button variant="outline" onClick={handleUnbind} className="w-full hover:bg-gray-50">
                   管理配置
