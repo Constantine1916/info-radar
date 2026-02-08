@@ -13,6 +13,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [subscriptions, setSubscriptions] = useState<string[]>([]);
   const [telegramStatus, setTelegramStatus] = useState<{ verified: boolean; chatId?: string }>({ verified: false });
+  const [wecomStatus, setWecomStatus] = useState<{ hasWebhook: boolean; enabled?: boolean }>({ hasWebhook: false });
   const [verificationCode, setVerificationCode] = useState('');
   const [pushing, setPushing] = useState(false);
   const fetchStartedRef = useRef(false);
@@ -76,7 +77,7 @@ export default function Dashboard() {
         console.log('Subscriptions loaded:', subsData.subscriptions?.length);
       }
 
-      // Fetch Bot config status
+      // Fetch Telegram config status
       console.log('Fetching Telegram config...');
       const tgRes = await fetch('/api/bot/config', {
         headers: { Authorization: `Bearer ${token}` },
@@ -88,6 +89,20 @@ export default function Dashboard() {
         const tgData = await tgRes.json();
         setTelegramStatus({ verified: tgData.verified, chatId: tgData.chatId });
         console.log('Telegram config loaded:', tgData.verified);
+      }
+
+      // Fetch WeCom config status
+      console.log('Fetching WeCom config...');
+      const wecomRes = await fetch('/api/webhook/config', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      if (!wecomRes.ok) {
+        console.error('webhook config API error:', wecomRes.status);
+      } else {
+        const wecomData = await wecomRes.json();
+        setWecomStatus({ hasWebhook: wecomData.hasWebhook, enabled: wecomData.enabled });
+        console.log('WeCom config loaded:', wecomData.hasWebhook);
       }
     } catch (error) {
       console.error('Failed to fetch data:', error);
@@ -234,10 +249,47 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* 订阅统计 */}
+          {/* 企业微信绑定 */}
           <div className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
             <div className="flex items-center gap-4 mb-5">
               <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center text-2xl shadow-soft">
+                💼
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 text-base">企业微信</h3>
+                <p className="text-xs text-gray-500">
+                  {wecomStatus.hasWebhook ? '✓ 已绑定' : '未绑定'}
+                </p>
+              </div>
+            </div>
+
+            {wecomStatus.hasWebhook ? (
+              <div className="space-y-3">
+                <Button 
+                  onClick={handlePushNow} 
+                  disabled={pushing || subscriptions.length === 0} 
+                  className="w-full bg-green-500 hover:bg-green-600 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
+                >
+                  {pushing ? '推送中...' : '立即推送'}
+                </Button>
+                <Button variant="outline" onClick={handleUnbind} className="w-full hover:bg-gray-50">
+                  管理配置
+                </Button>
+              </div>
+            ) : (
+              <Button 
+                onClick={handleGenerateCode} 
+                className="w-full bg-green-500 hover:bg-green-600 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
+              >
+                绑定企业微信
+              </Button>
+            )}
+          </div>
+
+          {/* 订阅统计 */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div className="flex items-center gap-4 mb-5">
+              <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-2xl shadow-soft">
                 📊
               </div>
               <div>
@@ -253,7 +305,7 @@ export default function Dashboard() {
           </div>
 
           {/* 推送统计 */}
-          <div className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hidden">
             <div className="flex items-center gap-4 mb-5">
               <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-2xl shadow-soft">
                 📬

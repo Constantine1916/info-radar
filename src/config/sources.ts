@@ -56,29 +56,21 @@ export const RSS_SOURCES: DataSource[] = [
     credibility: 4
   },
   
-  // 世界局势/政治
-  // Reuters - 原 URL 失效，暂时禁用
+  // 世界局势/政治 - 已取消订阅
   // {
-  //   name: 'Reuters World',
-  //   url: 'https://www.reutersagency.com/feed/?taxonomy=best-topics&post_type=best',
+  //   name: 'BBC News',
+  //   url: 'http://feeds.bbci.co.uk/news/world/rss.xml',
   //   type: 'rss',
   //   domain: 'WorldPolitics',
   //   credibility: 5
   // },
-  {
-    name: 'BBC News',
-    url: 'http://feeds.bbci.co.uk/news/world/rss.xml',
-    type: 'rss',
-    domain: 'WorldPolitics',
-    credibility: 5
-  },
-  {
-    name: 'The Guardian World',
-    url: 'https://www.theguardian.com/world/rss',
-    type: 'rss',
-    domain: 'WorldPolitics',
-    credibility: 5
-  },
+  // {
+  //   name: 'The Guardian World',
+  //   url: 'https://www.theguardian.com/world/rss',
+  //   type: 'rss',
+  //   domain: 'WorldPolitics',
+  //   credibility: 5
+  // },
   
   // 投资/创业
   {

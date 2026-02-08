@@ -4,6 +4,7 @@ import { RSSCollector } from './collectors/rss-collector';
 import { InfoFilter } from './processors/filter';
 import { DigestGenerator } from './processors/digest';
 import { TelegramNotifier } from './notifications/telegram';
+import { WeComNotifier } from './notifications/wecom';
 import { RSS_SOURCES } from './config/sources';
 
 async function main() {
@@ -47,10 +48,23 @@ async function main() {
   const digestGen = new DigestGenerator();
   const digest = digestGen.generate(grouped);
   
-  // 步骤5: 推送到Telegram
-  console.log('📱 Sending to Telegram...\n');
-  const telegram = new TelegramNotifier();
-  await telegram.sendLong(digest);
+  // 步骤5: 推送到企业微信（如果配置了）
+  const wecomKey = process.env.WEBHOOK_KEY;
+  const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
+  
+  if (wecomKey) {
+    console.log('📱 Sending to WeCom...\n');
+    const wecom = new WeComNotifier();
+    await wecom.sendLong(digest);
+  } else if (telegramToken) {
+    console.log('📱 Sending to Telegram...\n');
+    const telegram = new TelegramNotifier();
+    await telegram.sendLong(digest);
+  } else {
+    console.log('📱 [NO NOTIFICATION CONFIGURED]');
+    console.log('Add WEBHOOK_KEY or TELEGRAM credentials to .env\n');
+    console.log(digest);
+  }
   
   console.log('\n🎉 All done!');
 }
