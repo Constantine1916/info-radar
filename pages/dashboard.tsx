@@ -16,6 +16,8 @@ export default function Dashboard() {
   const [wecomStatus, setWecomStatus] = useState<{ hasWebhook: boolean; enabled?: boolean }>({ hasWebhook: false });
   const [pushingTelegram, setPushingTelegram] = useState(false);
   const [pushingWeCom, setPushingWeCom] = useState(false);
+  const [collecting, setCollecting] = useState(false);
+  const [collectResult, setCollectResult] = useState<any>(null);
   const fetchStartedRef = useRef(false);
 
   useEffect(() => {
@@ -200,6 +202,32 @@ export default function Dashboard() {
     }
   };
 
+  const handleCollect = async () => {
+    setCollecting(true);
+    setCollectResult(null);
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+
+      const res = await fetch('/api/collect', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setCollectResult(data);
+      } else {
+        alert(data.error || '采集失败');
+      }
+    } catch (error) {
+      alert('网络错误');
+    } finally {
+      setCollecting(false);
+    }
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#fafafa]">
@@ -245,7 +273,7 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
           {/* Telegram绑定 */}
           <div className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
             <div className="flex items-center gap-4 mb-5">
@@ -326,13 +354,40 @@ export default function Dashboard() {
               <div>
                 <h3 className="font-semibold text-gray-900 text-base">已订阅</h3>
                 <p className="text-xs text-gray-500">
-                  {subscriptions.length} / 9 个领域
+                  {subscriptions.length} / 11 个领域
                 </p>
               </div>
             </div>
             <div className="text-4xl font-light text-gray-900">
               {subscriptions.length}
             </div>
+          </div>
+
+          {/* 数据采集 */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div className="flex items-center gap-4 mb-5">
+              <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center text-2xl shadow-soft">
+                📥
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 text-base">数据采集</h3>
+                <p className="text-xs text-gray-500">
+                  {collectResult ? `已采集 ${collectResult.inserted} 条` : '立即采集最新资讯'}
+                </p>
+              </div>
+            </div>
+            <Button 
+              onClick={handleCollect} 
+              disabled={collecting}
+              className="w-full bg-orange-500 hover:bg-orange-600 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
+            >
+              {collecting ? '采集中...' : '立即采集'}
+            </Button>
+            {collectResult && (
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                {collectResult.success} 个源成功，{collectResult.time}ms
+              </p>
+            )}
           </div>
 
           {/* 推送统计 */}
@@ -359,7 +414,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-6">
             <h3 className="font-semibold text-gray-900 text-lg">选择关注的领域</h3>
             <span className="text-sm text-gray-500">
-              已选择 {subscriptions.length} / 9
+              已选择 {subscriptions.length} / 11
             </span>
           </div>
           
