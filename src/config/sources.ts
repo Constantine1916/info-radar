@@ -1,7 +1,7 @@
 import { DataSource } from '../types';
 
-// RSSHub 服务地址（本地或远程）
-const RSSHUB_BASE = process.env.RSSHUB_URL || 'https://hub.slarker.me';
+// RSSHub 服务地址（需要配置环境变量 RSSHUB_URL）
+const RSSHUB_BASE = process.env.RSSHUB_URL;
 
 export const RSS_SOURCES: DataSource[] = [
   // AI/技术趋势
@@ -68,19 +68,21 @@ export const RSS_SOURCES: DataSource[] = [
     credibility: 4
   },
 
-  // RSSHub 数据源（本地服务）
-  {
-    name: '知乎热榜',
-    url: `${RSSHUB_BASE}/zhihu/hot`,
-    type: 'rsshub',
-    domain: 'Hot',
-    credibility: 3
-  },
-  {
-    name: 'B站番剧排行',
-    url: `${RSSHUB_BASE}/bilibili/ranking/1/3`,
-    type: 'rsshub',
-    domain: 'Entertainment',
-    credibility: 3
-  }
+  // RSSHub 数据源（如果配置了 RSSHUB_URL）
+  ...(RSSHUB_BASE ? [
+    {
+      name: '知乎热榜',
+      url: `${RSSHUB_BASE}/zhihu/hot`,
+      type: 'rsshub',
+      domain: 'Hot',
+      credibility: 3
+    },
+    {
+      name: 'B站番剧排行',
+      url: `${RSSHUB_BASE}/bilibili/ranking/1/3`,
+      type: 'rsshub',
+      domain: 'Entertainment',
+      credibility: 3
+    }
+  ] : [])
 ];
