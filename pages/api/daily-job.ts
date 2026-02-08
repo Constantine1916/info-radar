@@ -91,9 +91,6 @@ export default async function handler(
       let skippedCount = 0;
 
       for (const profile of profiles) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
         // Get user's subscriptions
         const { data: subs } = await supabaseAdmin
           .from('subscriptions')
@@ -108,12 +105,15 @@ export default async function handler(
 
         const domains = subs.map(s => s.domain);
 
-        // Get today's items for subscribed domains
+        // Get recent items for subscribed domains (last 24 hours)
+        const yesterday = new Date();
+        yesterday.setHours(yesterday.getHours() - 24);
+
         const { data: items } = await supabaseAdmin
           .from('info_items')
           .select('*')
           .in('domain', domains)
-          .gte('collected_at', today.toISOString())
+          .gte('collected_at', yesterday.toISOString())
           .order('credibility_score', { ascending: false })
           .limit(20);
 
