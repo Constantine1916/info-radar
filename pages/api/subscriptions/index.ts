@@ -39,32 +39,36 @@ export default async function handler(
         return res.status(400).json({ error: 'Invalid domains' });
       }
 
-      // Delete all existing subscriptions
-      const { error: deleteError } = await supabaseAdmin
-        .from('subscriptions')
-        .delete()
-        .eq('user_id', user.id);
-
-      if (deleteError) {
-        console.error('Error deleting subscriptions:', deleteError);
-        return res.status(500).json({ error: 'Failed to delete subscriptions' });
-      }
-
-      // Insert new subscriptions
+      // 使用 upsert 替换所有订阅（更安全，避免 RLS 问题）
       if (domains.length > 0) {
         const subscriptions = domains.map(domain => ({
           user_id: user.id,
           domain,
           enabled: true,
+          // 如果表有 created_at 字段，保留原有的
         }));
 
-        const { error: insertError } = await supabaseAdmin
+        const { error: upsertError } = await supabaseAdmin
           .from('subscriptions')
-          .insert(subscriptions);
+          .upsert(subscriptions, {
+            onConflict: 'user_id, domain',
+            ignoreDuplicates: false,
+          });
 
-        if (insertError) {
-          console.error('Error inserting subscriptions:', insertError);
-          return res.status(500).json({ error: 'Failed to insert subscriptions' });
+        if (upsertError) {
+          console.error('Error upserting subscriptions:', upsertError);
+          return res.status(500).json({ error: 'Failed to update subscriptions: ' + upsertError.message });
+        }
+      } else {
+        // 如果domains为空，删除所有订阅
+        const { error: deleteError } = await supabaseAdmin
+          .from('subscriptions')
+          .delete()
+          .eq('user_id', user.id);
+
+        if (deleteError) {
+          console.error('Error deleting subscriptions:', deleteError);
+          return res.status(500).json({ error: 'Failed to clear subscriptions: ' + deleteError.message });
         }
       }
 
