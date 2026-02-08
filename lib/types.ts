@@ -1,7 +1,10 @@
 export interface UserProfile {
   id: string;
+  telegram_bot_token?: string;
   telegram_chat_id?: string;
   telegram_verified: boolean;
+  webhook_key?: string;
+  webhook_enabled?: boolean;
   verification_code?: string;
   created_at: string;
   updated_at: string;

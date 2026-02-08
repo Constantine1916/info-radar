@@ -1,8 +1,14 @@
 import axios from 'axios';
 import { createClient } from '@supabase/supabase-js';
+import { UserProfile } from '../../lib/types';
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY! || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+interface WebhookData {
+  webhook_key: string | null;
+  webhook_enabled: boolean | null;
+}
 
 export class WeComNotifier {
   private webhookUrl: string;
@@ -45,7 +51,7 @@ export class WeComNotifier {
         .from('user_profiles')
         .select('webhook_key, webhook_enabled')
         .eq('id', userId)
-        .single();
+        .single<WebhookData>();
       
       if (error || !data || !data.webhook_enabled || !data.webhook_key) {
         return null;
