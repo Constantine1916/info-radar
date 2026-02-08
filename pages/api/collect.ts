@@ -103,7 +103,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({
       success: true,
       sources: results.length,
-      success: successCount,
+      successCount,
       failed: results.length - successCount,
       collected: allItems.length,
       inserted,
