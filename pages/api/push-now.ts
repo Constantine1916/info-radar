@@ -22,7 +22,7 @@ async function sendTelegramMessage(botToken: string, chatId: string, text: strin
   await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     chat_id: chatId,
     text,
-    parse_mode: 'Markdown',
+    parse_mode: 'HTML',
     disable_web_page_preview: true,
   });
 }
@@ -118,15 +118,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const date = new Date().toISOString().split('T')[0];
     const totalCount = allItems.length;
 
-    // 构建 Telegram 消息（Markdown 格式）
-    let tgMessage = `📡 *Info Radar 推送*\n📅 ${date}\n\n`;
+    // 构建 Telegram 消息（HTML 格式，支持 <a href> 超链接）
+    let tgMessage = `📡 <b>Info Radar 推送</b>\n📅 ${date}\n\n`;
     tgMessage += `━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-    tgMessage += `📊 为你精选 *${totalCount}* 条最新信息\n\n`;
+    tgMessage += `📊 为你精选 <b>${totalCount}</b> 条最新信息\n\n`;
 
-    // 构建企微消息（Markdown 格式，超链接用 <a> 标签）
-    let wecomMessage = `📡 <b>Info Radar 推送</b>\n📅 ${date}\n\n`;
+    // 构建企微消息（Markdown 格式，支持 [标题](URL) 超链接）
+    let wecomMessage = `📡 **Info Radar 推送**\n📅 ${date}\n\n`;
     wecomMessage += `━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-    wecomMessage += `📊 为你精选 <b>${totalCount}</b> 条最新信息\n\n`;
+    wecomMessage += `📊 为你精选 **${totalCount}** 条最新信息\n\n`;
 
     // 按订阅顺序输出
     for (const domain of domains) {
@@ -136,24 +136,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const domainInfo = DOMAINS[domain as keyof typeof DOMAINS];
       
       // Telegram
-      tgMessage += `${domainInfo.emoji} *${domainInfo.name}* (${domainItems.length})\n`;
+      tgMessage += `${domainInfo.emoji} <b>${domainInfo.name}</b> (${domainItems.length})\n`;
       tgMessage += `${'─'.repeat(30)}\n\n`;
       
       // 企微
-      wecomMessage += `${domainInfo.emoji} <b>${domainInfo.name}</b> (${domainItems.length})\n`;
+      wecomMessage += `${domainInfo.emoji} **${domainInfo.name}** (${domainItems.length})\n`;
       wecomMessage += `${'─'.repeat(30)}\n\n`;
 
       domainItems.slice(0, 5).forEach((item: any, i: number) => {
         const title = item.title.substring(0, 80) + (item.title.length > 80 ? '...' : '');
         
-        // Telegram: Markdown 链接格式
+        // Telegram: HTML 格式 <a href="url">标题</a>
         tgMessage += `${i + 1}. ${title}\n`;
-        tgMessage += `   🔗 [链接](${item.link})\n`;
+        tgMessage += `   🔗 <a href="${item.link}">🔗 链接</a>\n`;
         tgMessage += `   📍 ${item.source} | ⭐ ${item.credibility_score}/5\n\n`;
         
-        // 企微: HTML 链接格式 <a href="url">链接文字</a>
+        // 企微: Markdown 格式 [标题](URL)
         wecomMessage += `${i + 1}. ${title}\n`;
-        wecomMessage += `   🔗 <a href="${item.link}">🔗 链接</a>\n`;
+        wecomMessage += `   🔗 [🔗 链接](${item.link})\n`;
         wecomMessage += `   📍 ${item.source} | ⭐ ${item.credibility_score}/5\n\n`;
       });
     }
@@ -175,15 +175,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Telegram
     if (hasTelegram && (!channel || channel === 'telegram') && profile.telegram_bot_token && profile.telegram_chat_id) {
-      const tgMessageEscaped = tgMessage
-        .replace(/_/g, '\\_')
-        .replace(/\*/g, '\\*')
-        .replace(/\[/g, '\\[')
-        .replace(/\]/g, '\\]')
-        .replace(/\(/g, '\\(')
-        .replace(/\)/g, '\\)')
-        .replace(/`/g, '\\`');
-      await sendTelegramMessage(profile.telegram_bot_token, profile.telegram_chat_id, tgMessageEscaped);
+      await sendTelegramMessage(profile.telegram_bot_token, profile.telegram_chat_id, tgMessage);
       results.push('Telegram');
     }
 
