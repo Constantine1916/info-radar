@@ -148,6 +148,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let wecomMsg = `📡 **Info Radar 推送**\n📅 ${date}\n\n`;
     wecomMsg += `📊 共 **${totalCount}** 条来自 ${feedResults.length} 个源\n\n`;
 
+    const pushedItems: FeedItem[] = [];
     // 按源分组输出
     for (const fr of feedResults) {
       const items = allItems.filter(item => item.source === fr.name);
@@ -161,6 +162,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         wecomMsg += `${i + 1}. [${title}](${item.link})\n`;
       });
       tgMsg += '\n';
+      pushedItems.push(...displayItems);
       wecomMsg += '\n';
     }
 
@@ -186,7 +188,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (sent.length === 0) return res.status(400).json({ error: 'No channels configured' });
 
     await supabaseAdmin.from('push_history').insert({
-      user_id: user.id, items_count: totalCount, domains: feedResults.map(f => f.name), success: true,
+      user_id: user.id, items_count: pushedItems.length, domains: feedResults.map(f => f.name), success: true, items: pushedItems,
     });
 
     return res.status(200).json({ success: true, itemsCount: totalCount, sources: feedResults, channels: sent });

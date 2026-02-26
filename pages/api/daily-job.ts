@@ -142,6 +142,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let wecomMsg = `📡 **Info Radar 每日摘要**\n📅 ${dateStr}\n\n`;
       wecomMsg += `📊 共 **${allItems.length}** 条来自 ${feedResults.length} 个源\n\n`;
 
+      const pushedItems: { title: string; link: string; source: string }[] = [];
       for (const fr of feedResults) {
         const items = allItems.filter(item => item.source === fr.name);
         const displayItems = items.slice(0, 5);
@@ -154,6 +155,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           wecomMsg += `${i + 1}. [${title}](${item.link})\n`;
         });
         tgMsg += '\n';
+        pushedItems.push(...displayItems);
         wecomMsg += '\n';
       }
 
@@ -184,9 +186,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // 记录推送历史
       await supabaseAdmin.from('push_history').insert({
         user_id: profile.id,
-        items_count: allItems.length,
+        items_count: pushedItems.length,
         domains: feedResults.map(f => f.name),
         success: true,
+        items: pushedItems,
       });
     }
 

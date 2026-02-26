@@ -18,26 +18,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { data: { user }, error: userError } = await supabase.auth.getUser(token);
   if (userError || !user) return res.status(401).json({ error: 'Unauthorized' });
 
-  const { domains, sent_at } = req.body;
-  if (!domains || !sent_at) return res.status(400).json({ error: 'Missing domains or sent_at' });
+  const { push_id } = req.body;
+  if (!push_id) return res.status(400).json({ error: 'Missing push_id' });
 
   try {
-    const sentAtDate = new Date(sent_at);
-    const startOfDay = new Date(sentAtDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(sentAtDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    const { data: record, error } = await supabaseAdmin
+      .from('push_history')
+      .select('items')
+      .eq('id', push_id)
+      .eq('user_id', user.id)
+      .single();
 
-    const { data: items } = await supabaseAdmin
-      .from('info_items')
-      .select('id, title, link, source, domain, credibility_score, published_at, ai_summary')
-      .in('domain', domains)
-      .gte('published_at', startOfDay.toISOString())
-      .lte('published_at', endOfDay.toISOString())
-      .order('credibility_score', { ascending: false })
-      .limit(50);
+    if (error || !record) return res.status(404).json({ error: 'Push record not found' });
 
-    return res.status(200).json({ success: true, items: items || [] });
+    return res.status(200).json({ success: true, items: record.items || [] });
   } catch (error) {
     console.error('History items error:', error);
     return res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
