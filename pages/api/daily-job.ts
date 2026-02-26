@@ -144,10 +144,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       for (const fr of feedResults) {
         const items = allItems.filter(item => item.source === fr.name);
-        tgMsg += `📌 <b>${fr.name}</b> (${items.length})\n`;
-        wecomMsg += `📌 **${fr.name}** (${items.length})\n`;
+        const displayItems = items.slice(0, 5);
+        tgMsg += `📌 <b>${fr.name}</b> (${displayItems.length})\n`;
+        wecomMsg += `📌 **${fr.name}** (${displayItems.length})\n`;
 
-        items.slice(0, 5).forEach((item, i) => {
+        displayItems.forEach((item, i) => {
           const title = item.title.substring(0, 80) + (item.title.length > 80 ? '...' : '');
           tgMsg += `${i + 1}. <a href="${item.link}">${title}</a>\n`;
           wecomMsg += `${i + 1}. [${title}](${item.link})\n`;
