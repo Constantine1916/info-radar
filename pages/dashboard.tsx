@@ -29,8 +29,9 @@ function FeedItem({ feed, editingId, editName, editUrl, setEditName, setEditUrl,
       value={feed}
       dragListener={false}
       dragControls={controls}
-      className="p-4 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all bg-white list-none"
-      whileDrag={{ scale: 1.02, boxShadow: '0 8px 25px rgba(0,0,0,0.1)', zIndex: 50 }}
+      className="p-4 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm bg-white list-none"
+      dragTransition={{ bounceStiffness: 600, bounceDamping: 20 }}
+      whileDrag={{ boxShadow: "0 8px 25px rgba(0,0,0,0.1)", zIndex: 50 }}
     >
       {editingId === feed.id ? (
         <div className="space-y-3">
