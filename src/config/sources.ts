@@ -58,5 +58,4 @@ export const RSS_SOURCES: DataSource[] = [
   ...(createRSSHubSource('知乎热榜', '/zhihu/hot', 'Hot', 3) ? [createRSSHubSource('知乎热榜', '/zhihu/hot', 'Hot', 3)!] : []),
   ...(createRSSHubSource('B站全站排行榜', '/bilibili/ranking/0/3', 'Entertainment', 3) ? [createRSSHubSource('B站全站排行榜', '/bilibili/ranking/0/3', 'Entertainment', 3)!] : []),
   ...(createRSSHubSource('B站科技区排行', '/bilibili/ranking/17/3', 'Technology', 3) ? [createRSSHubSource('B站科技区排行', '/bilibili/ranking/17/3', 'Technology', 3)!] : []),
-  ...(createRSSHubSource('36氪快讯', '/36kr/newsflashes', 'Investment', 3) ? [createRSSHubSource('36氪快讯', '/36kr/newsflashes', 'Investment', 3)!] : [])
 ].filter((s): s is DataSource => s !== null);
