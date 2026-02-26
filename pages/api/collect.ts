@@ -2,34 +2,13 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
 import Parser from 'rss-parser';
 import { createHash } from 'crypto';
+import { RSS_SOURCES } from '../../src/config/sources';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 const parser = new Parser({ timeout: 15000 });
-
-// RSS 数据源
-const RSS_SOURCES = [
-  { name: 'Hacker News', url: 'https://hnrss.org/frontpage', type: 'rss', domain: 'AI', credibility: 4 },
-  { name: 'Arxiv AI', url: 'http://export.arxiv.org/rss/cs.AI', type: 'rss', domain: 'AI', credibility: 5 },
-  { name: 'MIT Tech Review', url: 'https://www.technologyreview.com/feed/', type: 'rss', domain: 'AI', credibility: 5 },
-  { name: 'Next.js Blog', url: 'https://nextjs.org/feed.xml', type: 'rss', domain: 'FullStack', credibility: 5 },
-  { name: 'Vercel Blog', url: 'https://vercel.com/atom', type: 'rss', domain: 'FullStack', credibility: 4 },
-  { name: '36氪', url: 'https://36kr.com/feed', type: 'rss', domain: 'Investment', credibility: 3 },
-  { name: '少数派', url: 'https://sspai.com/feed', type: 'rss', domain: 'Productivity', credibility: 4 },
-];
-
-// RSSHub 数据源（如果配置了）
-// 默认使用 rsshub.umzzz.com (已验证可用)
-const RSSHUB_BASE = process.env.RSSHUB_URL || 'https://rsshub.umzzz.com';
-
-if (RSSHUB_BASE) {
-  RSS_SOURCES.push(
-    { name: '知乎热榜', url: `${RSSHUB_BASE}/zhihu/hot`, type: 'rsshub', domain: 'Hot', credibility: 3 },
-    { name: 'B站番剧排行', url: `${RSSHUB_BASE}/bilibili/ranking/1/3`, type: 'rsshub', domain: 'Entertainment', credibility: 3 }
-  );
-}
 
 function generateId(link: string): string {
   return createHash('md5').update(link).digest('hex').substring(0, 16);
@@ -67,7 +46,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // 并行采集
     const BATCH_SIZE = 5;
     const results: any[] = [];
     const allItems: any[] = [];
@@ -86,7 +64,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // 批量查询已存在的 item_id（只查一次）
+    // 批量查询已存在的 item_id
     const itemIds = allItems.map(item => item.item_id);
     const { data: existingItems } = await supabaseAdmin
       .from('info_items')
@@ -94,14 +72,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .in('item_id', itemIds);
 
     const existingIds = new Set(existingItems?.map(item => item.item_id) || []);
-
-    // 只插入不存在的
     const newItems = allItems.filter(item => !existingIds.has(item.item_id));
-    
+
     if (newItems.length > 0) {
       const { error: insertError } = await supabaseAdmin
         .from('info_items')
-        .insert(newItems.slice(0, 100)); // 限制单次插入条数
+        .insert(newItems.slice(0, 100));
 
       if (insertError) {
         console.error('Insert error:', insertError);
