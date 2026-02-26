@@ -53,8 +53,19 @@ export interface DataSource {
 }
 
 // 默认公共 RSS 源（新用户初始化用）
-export const DEFAULT_FEEDS = [
-  { name: 'Hacker News', url: 'https://hnrss.org/frontpage' },
-  { name: '36氪', url: 'https://36kr.com/feed' },
-  { name: '少数派', url: 'https://sspai.com/feed' },
+export interface SystemFeed {
+  name: string;
+  url: string;
+  isSystem: true;
+}
+
+export const SYSTEM_FEEDS: SystemFeed[] = [
+  { name: 'Hacker News', url: 'https://hnrss.org/frontpage', isSystem: true },
+  { name: '少数派', url: 'https://sspai.com/feed', isSystem: true },
+  { name: '36氪', url: 'https://36kr.com/feed', isSystem: true },
+  { name: '知乎热榜', url: 'http://101.32.243.232:1200/zhihu/hot', isSystem: true },
+  { name: 'B站热榜', url: 'http://101.32.243.232:1200/bilibili/ranking/0/3/1', isSystem: true },
 ];
+
+// 保留旧的 DEFAULT_FEEDS 兼容
+export const DEFAULT_FEEDS = SYSTEM_FEEDS;
