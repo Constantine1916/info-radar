@@ -1,13 +1,30 @@
 #!/usr/bin/env node
 import 'dotenv/config';
+require('dotenv').config({ path: '.env.local' });
 import Parser from 'rss-parser';
 import { createHash } from 'crypto';
 import { DOMAINS, DOMAIN_CONFIG, DataSource } from '../lib/types';
 
+const RSSHUB_URL = process.env.RSSHUB_URL;
+console.log('RSSHUB_URL:', RSSHUB_URL);
+
 const parser = new Parser({ timeout: 10000 }); // 10秒超时
+
+// 辅助函数：安全创建 DataSource
+function createRSSHubSource(name: string, url: string, domain: string, credibility: number): DataSource | null {
+  if (!RSSHUB_URL) return null;
+  return {
+    name,
+    url: `${RSSHUB_URL}${url}`,
+    type: 'rsshub',
+    domain,
+    credibility
+  };
+}
 
 // 数据源配置
 const RSS_SOURCES: DataSource[] = [
+  // 原有RSS源
   { name: 'Hacker News', url: 'https://hnrss.org/frontpage', type: 'rss', domain: 'AI', credibility: 4 },
   { name: 'Arxiv AI', url: 'http://export.arxiv.org/rss/cs.AI', type: 'rss', domain: 'AI', credibility: 5 },
   { name: 'MIT Tech Review', url: 'https://www.technologyreview.com/feed/', type: 'rss', domain: 'AI', credibility: 5 },
@@ -15,7 +32,13 @@ const RSS_SOURCES: DataSource[] = [
   { name: 'Vercel Blog', url: 'https://vercel.com/atom', type: 'rss', domain: 'FullStack', credibility: 4 },
   { name: '36氪', url: 'https://36kr.com/feed', type: 'rss', domain: 'Investment', credibility: 3 },
   { name: '少数派', url: 'https://sspai.com/feed', type: 'rss', domain: 'Productivity', credibility: 4 },
-];
+  
+  // RSSHub 源
+  ...(createRSSHubSource('B站全站排行榜', '/bilibili/ranking/0/3', 'Entertainment', 3) ? [createRSSHubSource('B站全站排行榜', '/bilibili/ranking/0/3', 'Entertainment', 3)!] : []),
+  ...(createRSSHubSource('B站科技区排行', '/bilibili/ranking/17/3', 'Technology', 3) ? [createRSSHubSource('B站科技区排行', '/bilibili/ranking/17/3', 'Technology', 3)!] : []),
+  ...(createRSSHubSource('36氪快讯', '/36kr/newsflashes', 'Investment', 3) ? [createRSSHubSource('36氪快讯', '/36kr/newsflashes', 'Investment', 3)!] : []),
+  ...(createRSSHubSource('知乎热榜', '/zhihu/hot', 'Hot', 3) ? [createRSSHubSource('知乎热榜', '/zhihu/hot', 'Hot', 3)!] : []),
+].filter((s): s is DataSource => s !== null);
 
 function generateId(link: string): string {
   return createHash('md5').update(link).digest('hex').substring(0, 16);
