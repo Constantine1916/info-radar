@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { Reorder, useDragControls } from 'framer-motion';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -7,6 +8,81 @@ import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { DEFAULT_FEEDS, UserFeed } from '../lib/types';
+
+function FeedItem({ feed, editingId, editName, editUrl, setEditName, setEditUrl, startEdit, cancelEdit, handleSaveEdit, savingEdit, handleDeleteFeed }: {
+  feed: UserFeed;
+  editingId: string | null;
+  editName: string;
+  editUrl: string;
+  setEditName: (v: string) => void;
+  setEditUrl: (v: string) => void;
+  startEdit: (feed: UserFeed) => void;
+  cancelEdit: () => void;
+  handleSaveEdit: () => void;
+  savingEdit: boolean;
+  handleDeleteFeed: (id: string) => void;
+}) {
+  const controls = useDragControls();
+
+  return (
+    <Reorder.Item
+      value={feed}
+      dragListener={false}
+      dragControls={controls}
+      className="p-4 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all bg-white"
+      whileDrag={{ scale: 1.02, boxShadow: '0 8px 25px rgba(0,0,0,0.1)', zIndex: 50 }}
+    >
+      {editingId === feed.id ? (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">名称</label>
+            <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">RSS URL</label>
+            <Input value={editUrl} onChange={(e) => setEditUrl(e.target.value)} />
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={cancelEdit} className="text-sm">取消</Button>
+            <Button onClick={handleSaveEdit} disabled={savingEdit || !editName || !editUrl} className="text-sm">
+              {savingEdit ? '保存中...' : '保存'}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between">
+          <div
+            className="text-gray-300 hover:text-gray-500 mr-3 flex-shrink-0 cursor-grab active:cursor-grabbing touch-none"
+            onPointerDown={(e) => controls.start(e)}
+            title="拖拽排序"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
+              <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+              <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-medium text-gray-900 truncate">{feed.name}</div>
+            <div className="text-xs text-gray-400 truncate mt-1">{feed.url}</div>
+          </div>
+          <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+            <button onClick={() => startEdit(feed)} className="text-gray-300 hover:text-blue-500 transition-colors" title="编辑">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+            <button onClick={() => handleDeleteFeed(feed.id)} className="text-gray-300 hover:text-red-500 transition-colors" title="删除">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+    </Reorder.Item>
+  );
+}
 
 export default function Dashboard() {
   const { user, loading: authLoading, signedIn, signOut } = useAuth();
@@ -21,13 +97,12 @@ export default function Dashboard() {
   const [editName, setEditName] = useState('');
   const [editUrl, setEditUrl] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [telegramStatus, setTelegramStatus] = useState<{ verified: boolean; chatId?: string }>({ verified: false });
   const [wecomStatus, setWecomStatus] = useState<{ hasWebhook: boolean }>({ hasWebhook: false });
   const [pushingTelegram, setPushingTelegram] = useState(false);
   const [pushingWeCom, setPushingWeCom] = useState(false);
   const fetchStartedRef = useRef(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!authLoading && !signedIn) {
@@ -152,33 +227,9 @@ export default function Dashboard() {
     finally { setSavingEdit(false); }
   };
 
-  const handleDragStart = (index: number) => {
-    setDragIndex(index);
-  };
-
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    setDragOverIndex(index);
-  };
-
-  const handleDragEnd = async () => {
-    if (dragIndex === null || dragOverIndex === null || dragIndex === dragOverIndex) {
-      setDragIndex(null);
-      setDragOverIndex(null);
-      return;
-    }
-
-    const newFeeds = [...feeds];
-    const [moved] = newFeeds.splice(dragIndex, 1);
-    newFeeds.splice(dragOverIndex, 0, moved);
-    setFeeds(newFeeds);
-    setDragIndex(null);
-    setDragOverIndex(null);
-
-    // 保存排序到后端
+  const saveOrder = useCallback(async (newFeeds: UserFeed[]) => {
     const token = await getToken();
     if (!token) return;
-
     const orders = newFeeds.map((f, i) => ({ id: f.id, sort_order: i }));
     try {
       await fetch('/api/feeds', {
@@ -189,6 +240,12 @@ export default function Dashboard() {
     } catch (err) {
       console.error('Failed to save order:', err);
     }
+  }, []);
+
+  const handleReorder = (newFeeds: UserFeed[]) => {
+    setFeeds(newFeeds);
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => saveOrder(newFeeds), 500);
   };
 
   const handleAddDefaults = async () => {
@@ -355,63 +412,24 @@ export default function Dashboard() {
               <p className="text-sm mt-2">点击上方「添加推荐源」快速开始</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {feeds.map((feed, index) => (
-                <div
+            <Reorder.Group axis="y" values={feeds} onReorder={handleReorder} className="space-y-3" as="div">
+              {feeds.map((feed) => (
+                <FeedItem
                   key={feed.id}
-                  draggable={editingId !== feed.id}
-                  onDragStart={() => handleDragStart(index)}
-                  onDragOver={(e) => handleDragOver(e, index)}
-                  onDragEnd={handleDragEnd}
-                  className={`p-4 rounded-xl border transition-all cursor-grab active:cursor-grabbing ${dragOverIndex === index ? 'border-blue-400 bg-blue-50/50' : 'border-gray-100 hover:border-gray-200 hover:shadow-sm'} ${dragIndex === index ? 'opacity-50' : ''}`}
-                >
-                  {editingId === feed.id ? (
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">名称</label>
-                        <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">RSS URL</label>
-                        <Input value={editUrl} onChange={(e) => setEditUrl(e.target.value)} />
-                      </div>
-                      <div className="flex gap-2 justify-end">
-                        <Button variant="outline" onClick={cancelEdit} className="text-sm">取消</Button>
-                        <Button onClick={handleSaveEdit} disabled={savingEdit || !editName || !editUrl} className="text-sm">
-                          {savingEdit ? '保存中...' : '保存'}
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between">
-                      <div className="text-gray-300 mr-3 flex-shrink-0 cursor-grab active:cursor-grabbing" title="拖拽排序">
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                          <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
-                          <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
-                          <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-gray-900 truncate">{feed.name}</div>
-                        <div className="text-xs text-gray-400 truncate mt-1">{feed.url}</div>
-                      </div>
-                      <div className="flex items-center gap-2 ml-4 flex-shrink-0">
-                        <button onClick={() => startEdit(feed)} className="text-gray-300 hover:text-blue-500 transition-colors" title="编辑">
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <button onClick={() => handleDeleteFeed(feed.id)} className="text-gray-300 hover:text-red-500 transition-colors" title="删除">
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                  feed={feed}
+                  editingId={editingId}
+                  editName={editName}
+                  editUrl={editUrl}
+                  setEditName={setEditName}
+                  setEditUrl={setEditUrl}
+                  startEdit={startEdit}
+                  cancelEdit={cancelEdit}
+                  handleSaveEdit={handleSaveEdit}
+                  savingEdit={savingEdit}
+                  handleDeleteFeed={handleDeleteFeed}
+                />
               ))}
-            </div>
+            </Reorder.Group>
           )}
         </div>
       </main>
