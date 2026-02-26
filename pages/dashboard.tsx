@@ -172,7 +172,27 @@ export default function Dashboard() {
 
       if (feedsRes.ok) {
         const data = await feedsRes.json();
-        setFeeds(data.feeds || []);
+        const userFeeds = data.feeds || [];
+        if (userFeeds.length === 0) {
+          // 新用户：自动订阅所有系统默认源
+          const added: UserFeed[] = [];
+          for (const sf of SYSTEM_FEEDS) {
+            try {
+              const addRes = await fetch('/api/feeds', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ name: sf.name, url: sf.url }),
+              });
+              if (addRes.ok) {
+                const d = await addRes.json();
+                added.push(d.feed);
+              }
+            } catch {}
+          }
+          setFeeds(added);
+        } else {
+          setFeeds(userFeeds);
+        }
       }
       if (tgRes.ok) {
         const data = await tgRes.json();
