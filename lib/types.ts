@@ -8,6 +8,7 @@ export interface UserProfile {
   verification_code?: string;
   created_at: string;
   updated_at: string;
+  sort_order: number;
 }
 
 export interface UserFeed {
@@ -18,6 +19,7 @@ export interface UserFeed {
   enabled: boolean;
   created_at: string;
   updated_at: string;
+  sort_order: number;
 }
 
 export interface InfoItem {

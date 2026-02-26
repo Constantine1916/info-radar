@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from('user_feeds')
       .select('*')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: true });
+      .order('sort_order', { ascending: true });
 
     if (error) return res.status(500).json({ error: 'Failed to fetch feeds' });
     return res.status(200).json({ feeds: feeds || [] });
@@ -28,9 +28,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 简单校验 URL
     try { new URL(url); } catch { return res.status(400).json({ error: 'URL 格式不正确' }); }
 
+    // 获取当前最大 sort_order
+    const { data: existing } = await supabaseAdmin
+      .from('user_feeds')
+      .select('sort_order')
+      .eq('user_id', user.id)
+      .order('sort_order', { ascending: false })
+      .limit(1);
+    const nextOrder = (existing && existing.length > 0) ? (existing[0].sort_order ?? 0) + 1 : 0;
+
     const { data, error } = await supabaseAdmin
       .from('user_feeds')
-      .insert({ user_id: user.id, name, url })
+      .insert({ user_id: user.id, name, url, sort_order: nextOrder })
       .select()
       .single();
 
@@ -83,6 +92,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (error) return res.status(500).json({ error: 'Failed to delete feed' });
     return res.status(200).json({ success: true });
+  }
+
+  // PATCH - 批量更新排序
+  if (req.method === 'PATCH') {
+    const { orders } = req.body;
+    if (!Array.isArray(orders)) return res.status(400).json({ error: 'orders must be an array of {id, sort_order}' });
+
+    try {
+      for (const item of orders) {
+        await supabaseAdmin
+          .from('user_feeds')
+          .update({ sort_order: item.sort_order })
+          .eq('id', item.id)
+          .eq('user_id', user.id);
+      }
+      return res.status(200).json({ success: true });
+    } catch (err) {
+      return res.status(500).json({ error: 'Failed to update order' });
+    }
   }
 
   return res.status(405).json({ error: 'Method not allowed' });

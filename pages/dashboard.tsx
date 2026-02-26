@@ -21,6 +21,8 @@ export default function Dashboard() {
   const [editName, setEditName] = useState('');
   const [editUrl, setEditUrl] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [telegramStatus, setTelegramStatus] = useState<{ verified: boolean; chatId?: string }>({ verified: false });
   const [wecomStatus, setWecomStatus] = useState<{ hasWebhook: boolean }>({ hasWebhook: false });
   const [pushingTelegram, setPushingTelegram] = useState(false);
@@ -148,6 +150,45 @@ export default function Dashboard() {
       }
     } catch { alert('网络错误'); }
     finally { setSavingEdit(false); }
+  };
+
+  const handleDragStart = (index: number) => {
+    setDragIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
+
+  const handleDragEnd = async () => {
+    if (dragIndex === null || dragOverIndex === null || dragIndex === dragOverIndex) {
+      setDragIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const newFeeds = [...feeds];
+    const [moved] = newFeeds.splice(dragIndex, 1);
+    newFeeds.splice(dragOverIndex, 0, moved);
+    setFeeds(newFeeds);
+    setDragIndex(null);
+    setDragOverIndex(null);
+
+    // 保存排序到后端
+    const token = await getToken();
+    if (!token) return;
+
+    const orders = newFeeds.map((f, i) => ({ id: f.id, sort_order: i }));
+    try {
+      await fetch('/api/feeds', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ orders }),
+      });
+    } catch (err) {
+      console.error('Failed to save order:', err);
+    }
   };
 
   const handleAddDefaults = async () => {
@@ -315,8 +356,15 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="space-y-3">
-              {feeds.map((feed) => (
-                <div key={feed.id} className="p-4 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all">
+              {feeds.map((feed, index) => (
+                <div
+                  key={feed.id}
+                  draggable={editingId !== feed.id}
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragEnd={handleDragEnd}
+                  className={`p-4 rounded-xl border transition-all cursor-grab active:cursor-grabbing ${dragOverIndex === index ? 'border-blue-400 bg-blue-50/50' : 'border-gray-100 hover:border-gray-200 hover:shadow-sm'} ${dragIndex === index ? 'opacity-50' : ''}`}
+                >
                   {editingId === feed.id ? (
                     <div className="space-y-3">
                       <div>
@@ -336,6 +384,13 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <div className="flex items-center justify-between">
+                      <div className="text-gray-300 mr-3 flex-shrink-0 cursor-grab active:cursor-grabbing" title="拖拽排序">
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                          <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
+                          <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                          <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
+                        </svg>
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-gray-900 truncate">{feed.name}</div>
                         <div className="text-xs text-gray-400 truncate mt-1">{feed.url}</div>
