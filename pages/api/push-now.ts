@@ -26,7 +26,7 @@ interface FeedItem {
 }
 
 async function sendTelegramMessage(botToken: string, chatId: string, text: string) {
-  await axios.post(\`https://api.telegram.org/bot\${botToken}/sendMessage\`, {
+  await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true,
   });
 }
@@ -109,22 +109,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const date = new Date().toISOString().split('T')[0];
     const totalCount = allItems.length;
 
-    let tgMsg = \`📡 <b>Info Radar 推送</b>\n📅 \${date}\n\n\`;
-    tgMsg += \`📊 共 <b>\${totalCount}</b> 条来自 \${feedResults.length} 个源\n\n\`;
+    let tgMsg = `📡 <b>Info Radar 推送</b>\n📅 ${date}\n\n`;
+    tgMsg += `📊 共 <b>${totalCount}</b> 条来自 ${feedResults.length} 个源\n\n`;
 
-    let wecomMsg = \`📡 **Info Radar 推送**\n📅 \${date}\n\n\`;
-    wecomMsg += \`📊 共 **\${totalCount}** 条来自 \${feedResults.length} 个源\n\n\`;
+    let wecomMsg = `📡 **Info Radar 推送**\n📅 ${date}\n\n`;
+    wecomMsg += `📊 共 **${totalCount}** 条来自 ${feedResults.length} 个源\n\n`;
 
     // 按源分组输出
     for (const fr of feedResults) {
       const items = allItems.filter(item => item.source === fr.name);
-      tgMsg += \`📌 <b>\${fr.name}</b> (\${items.length})\n\`;
-      wecomMsg += \`📌 **\${fr.name}** (\${items.length})\n\`;
+      tgMsg += `📌 <b>${fr.name}</b> (${items.length})\n`;
+      wecomMsg += `📌 **${fr.name}** (${items.length})\n`;
 
       items.slice(0, 5).forEach((item, i) => {
         const title = item.title.substring(0, 80) + (item.title.length > 80 ? '...' : '');
-        tgMsg += \`\${i + 1}. <a href="\${item.link}">\${title}</a>\n\`;
-        wecomMsg += \`\${i + 1}. [\${title}](\${item.link})\n\`;
+        tgMsg += `${i + 1}. <a href="${item.link}">${title}</a>\n`;
+        wecomMsg += `${i + 1}. [${title}](${item.link})\n`;
       });
       tgMsg += '\n';
       wecomMsg += '\n';
@@ -139,7 +139,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (hasWeCom && (!channel || channel === 'wecom') && profile.webhook_key) {
       const url = profile.webhook_key.includes('key=')
         ? profile.webhook_key
-        : \`https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=\${profile.webhook_key}\`;
+        : `https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${profile.webhook_key}`;
       await sendWeComMessage(url, wecomMsg);
       sent.push('WeCom');
     }

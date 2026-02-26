@@ -46,7 +46,7 @@ async function collectFeed(name: string, url: string): Promise<FeedItem[]> {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authToken = req.headers['authorization'];
   const expectedToken = process.env.CRON_SECRET;
-  if (authToken !== \`Bearer \${expectedToken}\`) {
+  if (authToken !== `Bearer ${expectedToken}`) {
     return res.status(401).json({ success: false, error: 'Unauthorized' });
   }
 
@@ -103,21 +103,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // 构建消息
       const dateStr = new Date().toISOString().split('T')[0];
 
-      let tgMsg = \`📡 <b>Info Radar 每日摘要</b>\n📅 \${dateStr}\n\n\`;
-      tgMsg += \`📊 共 <b>\${allItems.length}</b> 条来自 \${feedResults.length} 个源\n\n\`;
+      let tgMsg = `📡 <b>Info Radar 每日摘要</b>\n📅 ${dateStr}\n\n`;
+      tgMsg += `📊 共 <b>${allItems.length}</b> 条来自 ${feedResults.length} 个源\n\n`;
 
-      let wecomMsg = \`📡 **Info Radar 每日摘要**\n📅 \${dateStr}\n\n\`;
-      wecomMsg += \`📊 共 **\${allItems.length}** 条来自 \${feedResults.length} 个源\n\n\`;
+      let wecomMsg = `📡 **Info Radar 每日摘要**\n📅 ${dateStr}\n\n`;
+      wecomMsg += `📊 共 **${allItems.length}** 条来自 ${feedResults.length} 个源\n\n`;
 
       for (const fr of feedResults) {
         const items = allItems.filter(item => item.source === fr.name);
-        tgMsg += \`📌 <b>\${fr.name}</b> (\${items.length})\n\`;
-        wecomMsg += \`📌 **\${fr.name}** (\${items.length})\n\`;
+        tgMsg += `📌 <b>${fr.name}</b> (${items.length})\n`;
+        wecomMsg += `📌 **${fr.name}** (${items.length})\n`;
 
         items.slice(0, 5).forEach((item, i) => {
           const title = item.title.substring(0, 80) + (item.title.length > 80 ? '...' : '');
-          tgMsg += \`\${i + 1}. <a href="\${item.link}">\${title}</a>\n\`;
-          wecomMsg += \`\${i + 1}. [\${title}](\${item.link})\n\`;
+          tgMsg += `${i + 1}. <a href="${item.link}">${title}</a>\n`;
+          wecomMsg += `${i + 1}. [${title}](${item.link})\n`;
         });
         tgMsg += '\n';
         wecomMsg += '\n';
