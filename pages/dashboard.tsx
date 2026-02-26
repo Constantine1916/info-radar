@@ -29,7 +29,7 @@ function FeedItem({ feed, editingId, editName, editUrl, setEditName, setEditUrl,
       value={feed}
       dragListener={false}
       dragControls={controls}
-      className="p-4 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all bg-white"
+      className="p-4 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all bg-white list-none"
       whileDrag={{ scale: 1.02, boxShadow: '0 8px 25px rgba(0,0,0,0.1)', zIndex: 50 }}
     >
       {editingId === feed.id ? (
