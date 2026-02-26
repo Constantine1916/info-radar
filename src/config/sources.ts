@@ -24,44 +24,7 @@ export const RSS_SOURCES: DataSource[] = [
     domain: 'AI',
     credibility: 4
   },
-  {
-    name: 'Arxiv AI',
-    url: 'http://export.arxiv.org/rss/cs.AI',
-    type: 'rss',
-    domain: 'AI',
-    credibility: 5
-  },
-  {
-    name: 'MIT Technology Review AI',
-    url: 'https://www.technologyreview.com/feed/',
-    type: 'rss',
-    domain: 'AI',
-    credibility: 5
-  },
-  
-  // 全栈开发
-  {
-    name: 'Next.js Blog',
-    url: 'https://nextjs.org/feed.xml',
-    type: 'rss',
-    domain: 'FullStack',
-    credibility: 5
-  },
-  {
-    name: 'Node.js Blog',
-    url: 'https://nodejs.org/en/feed/blog.xml',
-    type: 'rss',
-    domain: 'FullStack',
-    credibility: 5
-  },
-  {
-    name: 'Vercel Blog',
-    url: 'https://vercel.com/atom',
-    type: 'rss',
-    domain: 'FullStack',
-    credibility: 4
-  },
-  
+
   // 投资/创业
   {
     name: '36氪',
@@ -80,7 +43,20 @@ export const RSS_SOURCES: DataSource[] = [
     credibility: 4
   },
 
-  // RSSHub 数据源（如果配置了 RSSHUB_URL）
+  // === GitHub Trending（通过 RSSHub）===
+  ...(createRSSHubSource('GitHub Trending 每日', '/github/trending/daily/any', 'AI', 4) ? [createRSSHubSource('GitHub Trending 每日', '/github/trending/daily/any', 'AI', 4)!] : []),
+  ...(createRSSHubSource('GitHub Trending 每周', '/github/trending/weekly/any', 'AI', 4) ? [createRSSHubSource('GitHub Trending 每周', '/github/trending/weekly/any', 'AI', 4)!] : []),
+
+  // === Twitter/X AI 博主（通过 RSSHub）===
+  ...(createRSSHubSource('宝玉 @xiaohu', '/twitter/user/xiaohu', 'AI', 4) ? [createRSSHubSource('宝玉 @xiaohu', '/twitter/user/xiaohu', 'AI', 4)!] : []),
+  ...(createRSSHubSource('Orange @oran_ge', '/twitter/user/oran_ge', 'AI', 4) ? [createRSSHubSource('Orange @oran_ge', '/twitter/user/oran_ge', 'AI', 4)!] : []),
+  ...(createRSSHubSource('Dotey @dotey', '/twitter/user/dotey', 'AI', 4) ? [createRSSHubSource('Dotey @dotey', '/twitter/user/dotey', 'AI', 4)!] : []),
+  ...(createRSSHubSource('Vista8 @vista8', '/twitter/user/vista8', 'AI', 4) ? [createRSSHubSource('Vista8 @vista8', '/twitter/user/vista8', 'AI', 4)!] : []),
+  ...(createRSSHubSource('Khazix @Khazix0918', '/twitter/user/Khazix0918', 'AI', 4) ? [createRSSHubSource('Khazix @Khazix0918', '/twitter/user/Khazix0918', 'AI', 4)!] : []),
+
+  // === RSSHub 数据源 ===
   ...(createRSSHubSource('知乎热榜', '/zhihu/hot', 'Hot', 3) ? [createRSSHubSource('知乎热榜', '/zhihu/hot', 'Hot', 3)!] : []),
-  ...(createRSSHubSource('B站番剧排行', '/bilibili/ranking/1/3', 'Entertainment', 3) ? [createRSSHubSource('B站番剧排行', '/bilibili/ranking/1/3', 'Entertainment', 3)!] : [])
+  ...(createRSSHubSource('B站全站排行榜', '/bilibili/ranking/0/3', 'Entertainment', 3) ? [createRSSHubSource('B站全站排行榜', '/bilibili/ranking/0/3', 'Entertainment', 3)!] : []),
+  ...(createRSSHubSource('B站科技区排行', '/bilibili/ranking/17/3', 'Technology', 3) ? [createRSSHubSource('B站科技区排行', '/bilibili/ranking/17/3', 'Technology', 3)!] : []),
+  ...(createRSSHubSource('36氪快讯', '/36kr/newsflashes', 'Investment', 3) ? [createRSSHubSource('36氪快讯', '/36kr/newsflashes', 'Investment', 3)!] : [])
 ].filter((s): s is DataSource => s !== null);
