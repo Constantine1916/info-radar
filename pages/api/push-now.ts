@@ -32,9 +32,30 @@ async function sendTelegramMessage(botToken: string, chatId: string, text: strin
 }
 
 async function sendWeComMessage(webhookUrl: string, text: string) {
-  await axios.post(webhookUrl, {
-    msgtype: 'markdown', markdown: { content: text },
-  }, { headers: { 'Content-Type': 'application/json' } });
+  const MAX_LEN = 3800;
+  if (text.length <= MAX_LEN) {
+    await axios.post(webhookUrl, {
+      msgtype: 'markdown', markdown: { content: text },
+    }, { headers: { 'Content-Type': 'application/json' } });
+    return;
+  }
+  const sections = text.split('\n\n');
+  let batch = '';
+  for (const sec of sections) {
+    if (batch.length + sec.length + 2 > MAX_LEN && batch.length > 0) {
+      await axios.post(webhookUrl, {
+        msgtype: 'markdown', markdown: { content: batch.trim() },
+      }, { headers: { 'Content-Type': 'application/json' } });
+      await new Promise(r => setTimeout(r, 500));
+      batch = '';
+    }
+    batch += sec + '\n\n';
+  }
+  if (batch.trim()) {
+    await axios.post(webhookUrl, {
+      msgtype: 'markdown', markdown: { content: batch.trim() },
+    }, { headers: { 'Content-Type': 'application/json' } });
+  }
 }
 
 async function collectFeed(feedName: string, feedUrl: string): Promise<FeedItem[]> {
