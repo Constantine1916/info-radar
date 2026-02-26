@@ -17,6 +17,10 @@ export default function Dashboard() {
   const [newFeedUrl, setNewFeedUrl] = useState('');
   const [addingFeed, setAddingFeed] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editUrl, setEditUrl] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
   const [telegramStatus, setTelegramStatus] = useState<{ verified: boolean; chatId?: string }>({ verified: false });
   const [wecomStatus, setWecomStatus] = useState<{ hasWebhook: boolean }>({ hasWebhook: false });
   const [pushingTelegram, setPushingTelegram] = useState(false);
@@ -109,6 +113,41 @@ export default function Dashboard() {
       if (res.ok) setFeeds(prev => prev.filter(f => f.id !== id));
       else alert('删除失败');
     } catch { alert('网络错误'); }
+  };
+
+  const startEdit = (feed: UserFeed) => {
+    setEditingId(feed.id);
+    setEditName(feed.name);
+    setEditUrl(feed.url);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditName('');
+    setEditUrl('');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId || !editName || !editUrl) return;
+    setSavingEdit(true);
+    const token = await getToken();
+    if (!token) { setSavingEdit(false); return; }
+
+    try {
+      const res = await fetch('/api/feeds', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id: editingId, name: editName, url: editUrl }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setFeeds(prev => prev.map(f => f.id === editingId ? data.feed : f));
+        cancelEdit();
+      } else {
+        alert(data.error || '保存失败');
+      }
+    } catch { alert('网络错误'); }
+    finally { setSavingEdit(false); }
   };
 
   const handleAddDefaults = async () => {
@@ -277,20 +316,44 @@ export default function Dashboard() {
           ) : (
             <div className="space-y-3">
               {feeds.map((feed) => (
-                <div key={feed.id} className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-gray-900 truncate">{feed.name}</div>
-                    <div className="text-xs text-gray-400 truncate mt-1">{feed.url}</div>
-                  </div>
-                  <button
-                    onClick={() => handleDeleteFeed(feed.id)}
-                    className="ml-4 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
-                    title="删除"
-                  >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
+                <div key={feed.id} className="p-4 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all">
+                  {editingId === feed.id ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">名称</label>
+                        <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">RSS URL</label>
+                        <Input value={editUrl} onChange={(e) => setEditUrl(e.target.value)} />
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <Button variant="outline" onClick={cancelEdit} className="text-sm">取消</Button>
+                        <Button onClick={handleSaveEdit} disabled={savingEdit || !editName || !editUrl} className="text-sm">
+                          {savingEdit ? '保存中...' : '保存'}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 truncate">{feed.name}</div>
+                        <div className="text-xs text-gray-400 truncate mt-1">{feed.url}</div>
+                      </div>
+                      <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                        <button onClick={() => startEdit(feed)} className="text-gray-300 hover:text-blue-500 transition-colors" title="编辑">
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button onClick={() => handleDeleteFeed(feed.id)} className="text-gray-300 hover:text-red-500 transition-colors" title="删除">
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

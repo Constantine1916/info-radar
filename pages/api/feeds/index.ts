@@ -41,6 +41,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(201).json({ feed: data });
   }
 
+  // PUT - 编辑 RSS 源
+  if (req.method === 'PUT') {
+    const { id, name, url } = req.body;
+    if (!id) return res.status(400).json({ error: 'Missing feed id' });
+    if (!name && !url) return res.status(400).json({ error: '请至少提供名称或 URL' });
+
+    if (url) {
+      try { new URL(url); } catch { return res.status(400).json({ error: 'URL 格式不正确' }); }
+    }
+
+    const update: Record<string, string> = {};
+    if (name) update.name = name;
+    if (url) update.url = url;
+
+    const { data, error } = await supabaseAdmin
+      .from('user_feeds')
+      .update(update)
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') return res.status(409).json({ error: '该 RSS 源已存在' });
+      return res.status(500).json({ error: 'Failed to update feed: ' + error.message });
+    }
+    return res.status(200).json({ feed: data });
+  }
+
   // DELETE - 删除 RSS 源
   if (req.method === 'DELETE') {
     const { id } = req.body;
