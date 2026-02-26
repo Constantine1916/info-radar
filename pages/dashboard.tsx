@@ -23,6 +23,40 @@ function FeedItem({ feed, editingId, editName, editUrl, setEditName, setEditUrl,
   handleDeleteFeed: (id: string) => void;
 }) {
   const controls = useDragControls();
+  const scrollRaf = useRef<number | null>(null);
+
+  const startDrag = (e: React.PointerEvent) => {
+    controls.start(e);
+
+    const EDGE = 80;
+    const SPEED = 12;
+
+    const onMove = (ev: PointerEvent) => {
+      if (scrollRaf.current) cancelAnimationFrame(scrollRaf.current);
+      const y = ev.clientY;
+      const vh = window.innerHeight;
+
+      const scroll = () => {
+        if (y < EDGE) {
+          window.scrollBy(0, -SPEED);
+          scrollRaf.current = requestAnimationFrame(scroll);
+        } else if (y > vh - EDGE) {
+          window.scrollBy(0, SPEED);
+          scrollRaf.current = requestAnimationFrame(scroll);
+        }
+      };
+      scroll();
+    };
+
+    const onUp = () => {
+      if (scrollRaf.current) cancelAnimationFrame(scrollRaf.current);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
 
   return (
     <Reorder.Item
@@ -54,7 +88,7 @@ function FeedItem({ feed, editingId, editName, editUrl, setEditName, setEditUrl,
         <div className="flex items-center justify-between">
           <div
             className="text-gray-300 hover:text-gray-500 mr-3 flex-shrink-0 cursor-grab active:cursor-grabbing touch-none"
-            onPointerDown={(e) => controls.start(e)}
+            onPointerDown={startDrag}
             title="拖拽排序"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
