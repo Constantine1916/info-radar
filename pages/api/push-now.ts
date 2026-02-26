@@ -32,29 +32,41 @@ async function sendTelegramMessage(botToken: string, chatId: string, text: strin
 }
 
 async function sendWeComMessage(webhookUrl: string, text: string) {
-  const MAX_LEN = 3800;
-  if (text.length <= MAX_LEN) {
-    await axios.post(webhookUrl, {
-      msgtype: 'markdown', markdown: { content: text },
-    }, { headers: { 'Content-Type': 'application/json' } });
+  // 企微 markdown 限制约 4096 字节，按源分批发送
+  const MAX_LEN = 3500;
+  
+  const sendOne = async (msg: string) => {
+    try {
+      await axios.post(webhookUrl, {
+        msgtype: 'markdown', markdown: { content: msg },
+      }, { headers: { 'Content-Type': 'application/json' } });
+    } catch (e) {
+      console.error('WeCom send error:', e);
+    }
+    await new Promise(r => setTimeout(r, 300));
+  };
+
+  if (Buffer.byteLength(text, 'utf8') <= MAX_LEN) {
+    await sendOne(text);
     return;
   }
-  const sections = text.split('\n\n');
-  let batch = '';
-  for (const sec of sections) {
-    if (batch.length + sec.length + 2 > MAX_LEN && batch.length > 0) {
-      await axios.post(webhookUrl, {
-        msgtype: 'markdown', markdown: { content: batch.trim() },
-      }, { headers: { 'Content-Type': 'application/json' } });
-      await new Promise(r => setTimeout(r, 500));
+
+  // 按 "📌" 分段（每个源一段）
+  const parts = text.split(/(?=📌)/);
+  const header = parts[0]; // 头部信息
+  let batch = header;
+
+  for (let i = 1; i < parts.length; i++) {
+    const part = parts[i];
+    if (Buffer.byteLength(batch + part, 'utf8') > MAX_LEN && batch.trim().length > 0) {
+      await sendOne(batch.trim());
       batch = '';
     }
-    batch += sec + '\n\n';
+    batch += part;
   }
+
   if (batch.trim()) {
-    await axios.post(webhookUrl, {
-      msgtype: 'markdown', markdown: { content: batch.trim() },
-    }, { headers: { 'Content-Type': 'application/json' } });
+    await sendOne(batch.trim());
   }
 }
 
