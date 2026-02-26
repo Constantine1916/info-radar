@@ -46,9 +46,9 @@ export default function Dashboard() {
 
     try {
       const [feedsRes, tgRes, wecomRes] = await Promise.all([
-        fetch('/api/feeds', { headers: { Authorization: \`Bearer \${token}\` } }),
-        fetch('/api/bot/config', { headers: { Authorization: \`Bearer \${token}\` } }),
-        fetch('/api/webhook/config', { headers: { Authorization: \`Bearer \${token}\` } }),
+        fetch('/api/feeds', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/bot/config', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/webhook/config', { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
       if (feedsRes.ok) {
@@ -79,7 +79,7 @@ export default function Dashboard() {
     try {
       const res = await fetch('/api/feeds', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: \`Bearer \${token}\` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ name: newFeedName, url: newFeedUrl }),
       });
       const data = await res.json();
@@ -103,7 +103,7 @@ export default function Dashboard() {
     try {
       const res = await fetch('/api/feeds', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', Authorization: \`Bearer \${token}\` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ id }),
       });
       if (res.ok) setFeeds(prev => prev.filter(f => f.id !== id));
@@ -119,7 +119,7 @@ export default function Dashboard() {
       try {
         const res = await fetch('/api/feeds', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: \`Bearer \${token}\` },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify(df),
         });
         if (res.ok) {
@@ -137,12 +137,12 @@ export default function Dashboard() {
     if (!token) { setter(false); return; }
 
     try {
-      const res = await fetch(\`/api/push-now?channel=\${ch}\`, {
+      const res = await fetch(`/api/push-now?channel=${ch}`, {
         method: 'POST',
-        headers: { Authorization: \`Bearer \${token}\` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      if (res.ok) alert(\`推送成功！已发送 \${data.itemsCount} 条信息\`);
+      if (res.ok) alert(`推送成功！已发送 ${data.itemsCount} 条信息`);
       else alert(data.error || '推送失败');
     } catch { alert('网络错误'); }
     finally { setter(false); }
