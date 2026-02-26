@@ -1,7 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../lib/supabase-admin';
 import axios from 'axios';
-import { DOMAINS } from '../../lib/types';
+import Parser from 'rss-parser';
+
+const parser = new Parser({ timeout: 15000 });
 
 interface ProfileData {
   id: string;
@@ -12,234 +14,150 @@ interface ProfileData {
   webhook_enabled: boolean | null;
 }
 
+interface FeedItem {
+  title: string;
+  link: string;
+  source: string;
+}
+
 async function sendTelegramMessage(botToken: string, chatId: string, text: string) {
   await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-    chat_id: chatId,
-    text,
-    parse_mode: 'Markdown',
-    disable_web_page_preview: true,
+    chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true,
   });
 }
 
 async function sendWeComMessage(webhookUrl: string, text: string) {
   await axios.post(webhookUrl, {
-    msgtype: 'markdown',
-    markdown: { content: text },
+    msgtype: 'markdown', markdown: { content: text },
   }, { headers: { 'Content-Type': 'application/json' } });
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  // Verify cron secret
+async function collectFeed(name: string, url: string): Promise<FeedItem[]> {
+  try {
+    const feed = await parser.parseURL(url);
+    return (feed.items || []).slice(0, 10).map(item => ({
+      title: item.title || 'Untitled',
+      link: item.link || '',
+      source: name,
+    }));
+  } catch { return []; }
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authToken = req.headers['authorization'];
   const expectedToken = process.env.CRON_SECRET;
-  
-  if (authToken !== `Bearer ${expectedToken}`) {
+  if (authToken !== \`Bearer \${expectedToken}\`) {
     return res.status(401).json({ success: false, error: 'Unauthorized' });
   }
 
   const results = {
-    collect: { success: false, count: 0, error: null as any },
-    push: { success: false, channels: { telegram: 0, wecom: 0 }, error: null as any },
+    push: { telegram: 0, wecom: 0, skipped: 0 },
   };
 
   try {
     console.log('🔄 Starting daily job...');
-    
-    // Step 1: Collect data
-    console.log('📊 Step 1: Collecting data...');
-    try {
-      const collectResponse = await axios.post(
-        `${process.env.NEXT_PUBLIC_SITE_URL}/api/collect`,
-        {},
-        {
-          headers: {
-            'Authorization': `Bearer ${expectedToken}`,
-          },
-        }
+
+    // 获取所有配置了推送渠道的用户
+    const { data: profiles, error: profileError } = await supabaseAdmin
+      .from('user_profiles')
+      .select('id, telegram_bot_token, telegram_chat_id, telegram_verified, webhook_key, webhook_enabled')
+      .or('telegram_verified.eq.true, and(webhook_enabled.eq.true, webhook_key.not.is.null)');
+
+    if (profileError || !profiles) {
+      throw new Error('Failed to fetch users');
+    }
+
+    for (const profile of profiles) {
+      // 获取用户的 RSS 源
+      const { data: feeds } = await supabaseAdmin
+        .from('user_feeds')
+        .select('name, url')
+        .eq('user_id', profile.id)
+        .eq('enabled', true);
+
+      if (!feeds || feeds.length === 0) {
+        results.push.skipped++;
+        continue;
+      }
+
+      // 并发采集用户的所有 RSS 源
+      const collectResults = await Promise.allSettled(
+        feeds.map(f => collectFeed(f.name, f.url))
       );
-      
-      results.collect.success = collectResponse.data.success;
-      results.collect.count = collectResponse.data.collected || 0;
-      console.log(`✅ Collected ${results.collect.count} items`);
-    } catch (error: any) {
-      results.collect.error = error.message;
-      console.error('❌ Collect failed:', error.message);
-    }
 
-    // Wait a bit between steps
-    await new Promise(resolve => setTimeout(resolve, 2000));
+      const allItems: FeedItem[] = [];
+      const feedResults: { name: string; count: number }[] = [];
 
-    // Step 2: Push to users
-    console.log('📱 Step 2: Pushing to users...');
-    try {
-      // Get all users with at least one configured channel (Telegram OR WeCom)
-      const { data: profiles, error: profileError } = await supabaseAdmin
-        .from('user_profiles')
-        .select('id, telegram_bot_token, telegram_chat_id, telegram_verified, webhook_key, webhook_enabled')
-        .or(`telegram_verified.eq.true, and(webhook_enabled.eq.true, webhook_key.not.is.null)`);
+      collectResults.forEach((r, i) => {
+        if (r.status === 'fulfilled' && r.value.length > 0) {
+          allItems.push(...r.value);
+          feedResults.push({ name: feeds[i].name, count: r.value.length });
+        }
+      });
 
-      if (profileError || !profiles) {
-        throw new Error('Failed to fetch users');
+      if (allItems.length === 0) {
+        results.push.skipped++;
+        continue;
       }
 
-      let telegramSuccess = 0;
-      let wecomSuccess = 0;
-      let skippedCount = 0;
+      // 构建消息
+      const dateStr = new Date().toISOString().split('T')[0];
 
-      for (const profile of profiles) {
-        // Get user's subscriptions
-        const { data: subs } = await supabaseAdmin
-          .from('subscriptions')
-          .select('domain')
-          .eq('user_id', profile.id)
-          .eq('enabled', true);
+      let tgMsg = \`📡 <b>Info Radar 每日摘要</b>\n📅 \${dateStr}\n\n\`;
+      tgMsg += \`📊 共 <b>\${allItems.length}</b> 条来自 \${feedResults.length} 个源\n\n\`;
 
-        if (!subs || subs.length === 0) {
-          skippedCount++;
-          continue;
-        }
+      let wecomMsg = \`📡 **Info Radar 每日摘要**\n📅 \${dateStr}\n\n\`;
+      wecomMsg += \`📊 共 **\${allItems.length}** 条来自 \${feedResults.length} 个源\n\n\`;
 
-        const domains = subs.map(s => s.domain);
+      for (const fr of feedResults) {
+        const items = allItems.filter(item => item.source === fr.name);
+        tgMsg += \`📌 <b>\${fr.name}</b> (\${items.length})\n\`;
+        wecomMsg += \`📌 **\${fr.name}** (\${items.length})\n\`;
 
-        // Get recent items for each domain (last 24 hours, 5 items per domain)
-        const yesterday = new Date();
-        yesterday.setHours(yesterday.getHours() - 24);
-
-        const allItems: any[] = [];
-        let hasData = false;
-
-        for (const domain of domains) {
-          const { data: items } = await supabaseAdmin
-            .from('info_items')
-            .select('*')
-            .eq('domain', domain)
-            .gte('collected_at', yesterday.toISOString())
-            .order('credibility_score', { ascending: false })
-            .limit(5);
-
-          if (items && items.length > 0) {
-            hasData = true;
-            allItems.push(...items);
-          }
-        }
-
-        if (!hasData || allItems.length === 0) {
-          skippedCount++;
-          continue;
-        }
-
-        const items = allItems;
-
-        // Build messages
-        const dateStr = new Date().toISOString().split('T')[0];
-        const totalCount = items.length;
-
-        // Telegram message (Markdown)
-        let tgMessage = `📡 <b>Info Radar 每日摘要</b>\n📅 ${dateStr}\n\n`;
-        tgMessage += `━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-        tgMessage += `📊 今日为你精选 <b>${totalCount}</b> 条信息\n\n`;
-
-        // WeCom message (Markdown with links)
-        let wecomMessage = `📡 **Info Radar 每日摘要**\n📅 ${dateStr}\n\n`;
-        wecomMessage += `━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-        wecomMessage += `📊 今日为你精选 **${totalCount}** 条信息\n\n`;
-
-        // Group by domain
-        type InfoItemType = typeof items[0];
-        const grouped = items.reduce((acc, item) => {
-          if (!acc[item.domain]) acc[item.domain] = [];
-          acc[item.domain].push(item);
-          return acc;
-        }, {} as Record<string, InfoItemType[]>);
-
-        for (const domain of domains) {
-          const domainItems = grouped[domain];
-          if (!domainItems || domainItems.length === 0) continue;
-
-          const domainInfo = DOMAINS[domain as keyof typeof DOMAINS];
-          
-          tgMessage += `${domainInfo.emoji} <b>${domainInfo.name}</b> (${domainItems.length})\n`;
-          tgMessage += `${'─'.repeat(30)}\n\n`;
-          
-          wecomMessage += `${domainInfo.emoji} **${domainInfo.name}** (${domainItems.length})\n`;
-          wecomMessage += `${'─'.repeat(30)}\n\n`;
-
-          domainItems.slice(0, 5).forEach((item: any, i: number) => {
-            const title = item.title.substring(0, 80) + (item.title.length > 80 ? '...' : '');
-            
-            // Telegram: HTML link
-            tgMessage += `${i + 1}. <a href="${item.link}">${title}</a>\n`;
-            tgMessage += `   📍 ${item.source} | ⭐ ${item.credibility_score}/5\n\n`;
-            
-            // WeCom: Markdown link
-            wecomMessage += `${i + 1}. [${title}](${item.link})\n`;
-            wecomMessage += `   📍 ${item.source} | ⭐ ${item.credibility_score}/5\n\n`;
-          });
-
-          if (domainItems.length > 5) {
-            tgMessage += `   _...还有 ${domainItems.length - 5} 条_\n\n`;
-            wecomMessage += `   _...还有 ${domainItems.length - 5} 条_\n\n`;
-          }
-        }
-
-        tgMessage += `━━━━━━━━━━━━━━━━━━━━━━━━\n✅ 自动推送 | 💡 by Info Radar`;
-        wecomMessage += `━━━━━━━━━━━━━━━━━━━━━━━━\n✅ by Info Radar`;
-
-        // Push to Telegram
-        if (profile.telegram_verified && profile.telegram_bot_token && profile.telegram_chat_id) {
-          try {
-            await sendTelegramMessage(profile.telegram_bot_token, profile.telegram_chat_id, tgMessage);
-            telegramSuccess++;
-            console.log(`✅ Telegram pushed to user ${profile.id}`);
-          } catch (error) {
-            console.error(`❌ Telegram failed for user ${profile.id}:`, error);
-          }
-          // Avoid hitting rate limits
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-
-        // Push to WeCom
-        if (profile.webhook_enabled && profile.webhook_key) {
-          try {
-            const webhookUrl = profile.webhook_key.includes('key=') 
-              ? profile.webhook_key 
-              : `https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${profile.webhook_key}`;
-            await sendWeComMessage(webhookUrl, wecomMessage);
-            wecomSuccess++;
-            console.log(`✅ WeCom pushed to user ${profile.id}`);
-          } catch (error) {
-            console.error(`❌ WeCom failed for user ${profile.id}:`, error);
-          }
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-
-        // Record push history
-        await supabaseAdmin.from('push_history').insert({
-          user_id: profile.id,
-          items_count: items.length,
-          domains,
-          success: true,
+        items.slice(0, 5).forEach((item, i) => {
+          const title = item.title.substring(0, 80) + (item.title.length > 80 ? '...' : '');
+          tgMsg += \`\${i + 1}. <a href="\${item.link}">\${title}</a>\n\`;
+          wecomMsg += \`\${i + 1}. [\${title}](\${item.link})\n\`;
         });
+        tgMsg += '\n';
+        wecomMsg += '\n';
       }
 
-      results.push.success = true;
-      results.push.channels = { telegram: telegramSuccess, wecom: wecomSuccess };
-      console.log(`✅ Push completed: TG ${telegramSuccess}, WeCom ${wecomSuccess}`);
-    } catch (error: any) {
-      results.push.error = error.message;
-      console.error('❌ Push failed:', error.message);
+      tgMsg += '✅ 自动推送 | by Info Radar';
+      wecomMsg += '✅ by Info Radar';
+
+      // 发送 Telegram
+      if (profile.telegram_verified && profile.telegram_bot_token && profile.telegram_chat_id) {
+        try {
+          await sendTelegramMessage(profile.telegram_bot_token, profile.telegram_chat_id, tgMsg);
+          results.push.telegram++;
+        } catch (e) { console.error('TG fail:', e); }
+        await new Promise(r => setTimeout(r, 500));
+      }
+
+      // 发送企微
+      if (profile.webhook_enabled && profile.webhook_key) {
+        try {
+          const url = profile.webhook_key.includes('key=')
+            ? profile.webhook_key
+            : `https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${profile.webhook_key}`;
+          await sendWeComMessage(url, wecomMsg);
+          results.push.wecom++;
+        } catch (e) { console.error('WeCom fail:', e); }
+        await new Promise(r => setTimeout(r, 500));
+      }
+
+      // 记录推送历史
+      await supabaseAdmin.from('push_history').insert({
+        user_id: profile.id,
+        items_count: allItems.length,
+        domains: feedResults.map(f => f.name),
+        success: true,
+      });
     }
 
-    console.log('✅ Daily job completed');
-
-    return res.status(200).json({
-      success: true,
-      results,
-      timestamp: new Date().toISOString(),
-    });
+    console.log('✅ Daily job completed:', results);
+    return res.status(200).json({ success: true, results, timestamp: new Date().toISOString() });
   } catch (error) {
     console.error('❌ Daily job error:', error);
     return res.status(500).json({

@@ -6,7 +6,7 @@ import { useAuth } from '../lib/auth-context';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/button';
 import { formatDate } from '../lib/utils';
-import { DOMAINS } from '../lib/types';
+
 
 interface PushRecord {
   id: string;
@@ -242,7 +242,7 @@ export default function History() {
                     <div className="flex items-center gap-4">
                       <div className="flex flex-wrap gap-1.5">
                         {record.domains.map((domain) => {
-                          const info = DOMAINS[domain as keyof typeof DOMAINS];
+                          const info = { emoji: "📌", name: domain };
                           return (
                             <span
                               key={domain}

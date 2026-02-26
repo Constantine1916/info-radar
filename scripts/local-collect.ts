@@ -3,7 +3,7 @@ import 'dotenv/config';
 require('dotenv').config({ path: '.env.local' });
 import Parser from 'rss-parser';
 import { createHash } from 'crypto';
-import { DOMAINS, DOMAIN_CONFIG, DataSource } from '../lib/types';
+import { DataSource } from "../lib/types";
 
 const RSSHUB_URL = process.env.RSSHUB_URL;
 console.log('RSSHUB_URL:', RSSHUB_URL);

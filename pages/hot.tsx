@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '../lib/auth-context';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/button';
-import { DOMAINS } from '../lib/types';
+
 
 interface HotItem {
   id: string;
@@ -354,7 +354,7 @@ export default function Hot() {
         {/* Footer */}
         <div className="mt-8 text-center">
           <p className="text-xs text-gray-400">
-            数据来源：{Object.values(DOMAINS).map(d => d.name).join('、')}
+            数据来源：RSS 订阅源
           </p>
         </div>
       </main>
