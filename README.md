@@ -216,3 +216,4 @@ MIT License - 自由使用和修改
 // auto deploy test
 # Email push enabled
 # SendCloud integrated
+// Trigger redeploy - remove SendCloud env vars
