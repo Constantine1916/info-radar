@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { SYSTEM_FEEDS, UserFeed } from '../lib/types';
+import { FeedItem } from '../components/FeedItem';
 
 function CustomFeedItem({ feed, editingId, editName, editUrl, setEditName, setEditUrl, startEdit, cancelEdit, handleSaveEdit, savingEdit, handleDeleteFeed }: {
   feed: UserFeed;
@@ -127,7 +128,6 @@ export default function Dashboard() {
   const [editName, setEditName] = useState('');
   const [editUrl, setEditUrl] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
-  const [togglingSystem, setTogglingSystem] = useState<Set<string>>(new Set());
   const [telegramStatus, setTelegramStatus] = useState<{ verified: boolean; chatId?: string }>({ verified: false });
   const [wecomStatus, setWecomStatus] = useState<{ hasWebhook: boolean }>({ hasWebhook: false });
   const [pushingTelegram, setPushingTelegram] = useState(false);
@@ -136,15 +136,6 @@ export default function Dashboard() {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 判断系统源是否已订阅
-  const isSystemFeedSubscribed = (url: string) => feeds.some(f => f.url === url);
-  // 判断一个 feed 是否是系统源
-  const isSystemFeed = (url: string) => SYSTEM_FEEDS.some(sf => sf.url === url);
-  // 用户自定义源（排除系统源）
-  const customFeeds = feeds.filter(f => !isSystemFeed(f.url));
-
-  useEffect(() => {
-    if (!authLoading && !signedIn) {
-      router.push('/auth/login');
       return;
     }
     if (signedIn && !fetchStartedRef.current) {
@@ -209,43 +200,6 @@ export default function Dashboard() {
     }
   };
 
-  const handleToggleSystemFeed = async (sf: { name: string; url: string }) => {
-    const token = await getToken();
-    if (!token) return;
-
-    setTogglingSystem(prev => new Set(prev).add(sf.url));
-
-    const existing = feeds.find(f => f.url === sf.url);
-    try {
-      if (existing) {
-        // 取消订阅：删除
-        const res = await fetch('/api/feeds', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ id: existing.id }),
-        });
-        if (res.ok) setFeeds(prev => prev.filter(f => f.id !== existing.id));
-      } else {
-        // 订阅：添加
-        const res = await fetch('/api/feeds', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ name: sf.name, url: sf.url }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setFeeds(prev => [...prev, data.feed]);
-        }
-      }
-    } catch { }
-    finally {
-      setTogglingSystem(prev => {
-        const next = new Set(prev);
-        next.delete(sf.url);
-        return next;
-      });
-    }
-  };
 
   const handleAddFeed = async () => {
     if (!newFeedName || !newFeedUrl) return;
@@ -286,6 +240,30 @@ export default function Dashboard() {
       if (res.ok) setFeeds(prev => prev.filter(f => f.id !== id));
       else alert('删除失败');
     } catch { alert('网络错误'); }
+  };
+
+  const handleToggleEnabled = async (id: string, enabled: boolean) => {
+    const token = await getToken();
+    if (!token) return;
+
+    // 乐观更新
+    setFeeds(prev => prev.map(f => f.id === id ? { ...f, enabled } : f));
+
+    try {
+      const res = await fetch('/api/feeds', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id, enabled }),
+      });
+      if (!res.ok) {
+        // 回滚
+        setFeeds(prev => prev.map(f => f.id === id ? { ...f, enabled: !enabled } : f));
+        alert('更新失败');
+      }
+    } catch {
+      setFeeds(prev => prev.map(f => f.id === id ? { ...f, enabled: !enabled } : f));
+      alert('网络错误');
+    }
   };
 
   const startEdit = (feed: UserFeed) => {
@@ -451,7 +429,6 @@ export default function Dashboard() {
           <div className="space-y-3">
             {SYSTEM_FEEDS.map((sf) => {
               const subscribed = isSystemFeedSubscribed(sf.url);
-              const toggling = togglingSystem.has(sf.url);
               return (
                 <div key={sf.url} className="flex items-center justify-between p-4 rounded-xl border border-gray-100">
                   <div className="flex-1 min-w-0">
