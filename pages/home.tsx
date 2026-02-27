@@ -3,6 +3,7 @@ import { Reorder, useDragControls } from 'framer-motion';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
+import { message } from 'antd';
 import { useAuth } from '../lib/auth-context';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/button';
@@ -81,7 +82,7 @@ export default function Dashboard() {
 
   const handleDialogSubmit = async (url: string, name: string) => {
     const token = await getToken();
-    if (!token) throw new Error('No auth token');
+    if (!token) throw new Error('未登录，请重新登录');
 
     if (dialogMode === 'add') {
       // 添加模式：先尝试智能识别
@@ -95,10 +96,11 @@ export default function Dashboard() {
       if (smartRes.ok) {
         setFeeds(prev => [...prev, smartData.feed]);
         closeDialog();
-        alert(`✓ 已添加：${smartData.feed.name}`);
+        message.success(`✓ 已添加：${smartData.feed.name}`);
       } else if (smartData.hint) {
-        throw new Error(`${smartData.error}\n\n${smartData.hint}`);
+        throw new Error(`${smartData.error}\n\n提示：${smartData.hint}`);
       } else if (name) {
+        // 智能识别失败，尝试手动添加
         const manualRes = await fetch('/api/feeds', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -108,7 +110,7 @@ export default function Dashboard() {
         if (manualRes.ok) {
           setFeeds(prev => [...prev, manualData.feed]);
           closeDialog();
-          alert(`✓ 已添加：${manualData.feed.name}`);
+          message.success(`✓ 已添加：${manualData.feed.name}`);
         } else {
           throw new Error(manualData.error || '添加失败');
         }
@@ -127,7 +129,7 @@ export default function Dashboard() {
       if (res.ok) {
         setFeeds(prev => prev.map(f => f.id === dialogFeedId ? data.feed : f));
         closeDialog();
-        alert(`✓ 已保存`);
+        message.success('✓ 已保存');
       } else {
         throw new Error(data.error || '保存失败');
       }
