@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "../../lib/supabase-admin";
-import { resend, FROM_EMAIL } from "../../lib/email/resend-client";
+import { sendEmail } from "../../lib/email/email-sender";
 import { generatePushEmailHTML } from "../../lib/email/templates";
 import Parser from "rss-parser";
 import { InfoItem } from "../../lib/types";
@@ -87,21 +87,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const emailHTML = generatePushEmailHTML(allItems, today);
 
   // 发送邮件
-  try {
-    await resend.emails.send({
-      from: FROM_EMAIL,
-      to: settings.email_address,
-      subject: `📡 Info Radar - 今日推送 (${today})`,
-      html: emailHTML,
-    });
+  const result = await sendEmail({
+    to: settings.email_address,
+    subject: `📡 Info Radar - 今日推送 (${today})`,
+    html: emailHTML,
+  });
 
+  if (result.success) {
+    console.log(`Push email sent via ${result.provider} to ${settings.email_address}`);
     return res.status(200).json({ 
       success: true,
       itemCount: allItems.length,
       feedCount: feeds.length,
+      provider: result.provider,
     });
-  } catch (error: any) {
-    console.error("Failed to send email:", error);
-    return res.status(500).json({ error: "Failed to send email" });
+  } else {
+    console.error("Failed to send email:", result.error);
+    return res.status(500).json({ error: result.error || "Failed to send email" });
   }
 }

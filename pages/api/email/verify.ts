@@ -49,17 +49,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // 发送验证邮件
   const verificationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://info-radar-alpha.vercel.app"}/api/email/confirm?token=${verificationToken}`;
   
-  try {
-    await resend.emails.send({
-      from: FROM_EMAIL,
-      to: settings.email_address,
-      subject: "【Info Radar】邮箱验证 - 请点击确认",
-      html: generateVerificationEmailHTML(verificationUrl),
-    });
+  const result = await sendEmail({
+    to: settings.email_address,
+    subject: "【Info Radar】邮箱验证 - 请点击确认",
+    html: generateVerificationEmailHTML(verificationUrl),
+  });
 
-    return res.status(200).json({ success: true });
-  } catch (error: any) {
-    console.error("Failed to send verification email:", error);
-    return res.status(500).json({ error: "Failed to send email" });
+  if (result.success) {
+    console.log(`Verification email sent via ${result.provider} to ${settings.email_address}`);
+    return res.status(200).json({ success: true, provider: result.provider });
+  } else {
+    console.error("Failed to send verification email:", result.error);
+    return res.status(500).json({ error: result.error || "Failed to send email" });
   }
 }
