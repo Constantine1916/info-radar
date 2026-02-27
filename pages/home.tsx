@@ -26,8 +26,10 @@ export default function Dashboard() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [telegramStatus, setTelegramStatus] = useState<{ verified: boolean; chatId?: string }>({ verified: false });
   const [wecomStatus, setWecomStatus] = useState<{ hasWebhook: boolean }>({ hasWebhook: false });
+  const [emailStatus, setEmailStatus] = useState<{ verified: boolean; enabled: boolean }>({ verified: false, enabled: false });
   const [pushingTelegram, setPushingTelegram] = useState(false);
   const [pushingWeCom, setPushingWeCom] = useState(false);
+  const [pushingEmail, setPushingEmail] = useState(false);
   const fetchStartedRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -57,10 +59,11 @@ export default function Dashboard() {
     if (!token) { setLoading(false); return; }
 
     try {
-      const [feedsRes, tgRes, wecomRes] = await Promise.all([
+      const [feedsRes, tgRes, wecomRes, emailRes] = await Promise.all([
         fetch('/api/feeds', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/bot/config', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/webhook/config', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/email/config', { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
       if (feedsRes.ok) {
@@ -224,19 +227,32 @@ export default function Dashboard() {
     saveTimerRef.current = setTimeout(() => saveOrder(newFeeds), 500);
   };
 
-  const handlePush = async (ch: 'telegram' | 'wecom') => {
-    const setter = ch === 'telegram' ? setPushingTelegram : setPushingWeCom;
+  const handlePush = async (ch: 'telegram' | 'wecom' | 'email') => {
+    let setter: (v: boolean) => void;
+    if (ch === 'telegram') {
+      setter = setPushingTelegram;
+    } else if (ch === 'wecom') {
+      setter = setPushingWeCom;
+    } else {
+      setter = setPushingEmail;
+    }
+    
     setter(true);
     const token = await getToken();
     if (!token) { setter(false); return; }
 
+    const endpoint = ch === 'telegram' ? '/api/push-now' : ch === 'wecom' ? '/api/push-wecom' : '/api/push-email';
+
     try {
-      const res = await fetch(`/api/push-now?channel=${ch}`, {
+      const res = await fetch(endpoint, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` 
+        },
       });
       const data = await res.json();
-      if (res.ok) alert(`推送成功！已发送 ${data.itemsCount} 条信息`);
+      if (res.ok) alert(`推送成功！已发送 ${data.itemCount || data.itemsCount || 0} 条信息`);
       else alert(data.error || '推送失败');
     } catch { alert('网络错误'); }
     finally { setter(false); }

@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 
-type Tab = 'telegram' | 'wecom';
+type Tab = 'telegram' | 'wecom' | 'email';
 
 export default function Settings() {
   const { user, loading } = useAuth();
@@ -24,6 +24,12 @@ export default function Settings() {
   // WeCom state
   const [webhookKey, setWebhookKey] = useState('');
   const [hasWebhook, setHasWebhook] = useState(false);
+
+  // Email state
+  const [emailAddress, setEmailAddress] = useState('');
+  const [emailEnabled, setEmailEnabled] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [hasEmail, setHasEmail] = useState(false);
   
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -38,6 +44,7 @@ export default function Settings() {
     if (user) {
       loadBotConfig();
       loadWebhookConfig();
+      loadEmailConfig();
     }
   }, [user]);
 
@@ -84,6 +91,32 @@ export default function Settings() {
       }
     } catch (error) {
       console.error('Failed to load webhook config:', error);
+    }
+  }
+
+  
+  async function loadEmailConfig() {
+    if (!supabase) return;
+    
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+
+      const response = await fetch('/api/email/config', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setEmailAddress(data.address || '');
+        setEmailEnabled(data.enabled || false);
+        setEmailVerified(data.verified || false);
+        setHasEmail(!!data.address);
+      }
+    } catch (error) {
+      console.error('Failed to load email config:', error);
     }
   }
 
@@ -224,6 +257,117 @@ export default function Settings() {
     }
   }
 
+
+  async function handleSaveEmail() {
+    if (!supabase) return;
+    
+    if (!emailAddress) {
+      setMessage('请填写邮箱地址');
+      return;
+    }
+
+    setSaving(true);
+    setMessage('');
+
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+
+      const response = await fetch('/api/email/config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          email_address: emailAddress,
+          email_enabled: emailEnabled,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMessage(data.needsVerification ? '保存成功！请发送验证邮件' : '保存成功！');
+        setHasEmail(true);
+        if (data.needsVerification) {
+          setEmailVerified(false);
+        }
+        loadEmailConfig();
+      } else {
+        const error = await response.json();
+        setMessage(`保存失败: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Failed to save email config:', error);
+      setMessage('保存失败，请重试');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSendVerification() {
+    if (!supabase) return;
+
+    setSaving(true);
+    setMessage('');
+
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+
+      const response = await fetch('/api/email/verify', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setMessage('✅ 验证邮件已发送，请查收邮箱');
+      } else {
+        const error = await response.json();
+        setMessage(`发送失败: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Failed to send verification:', error);
+      setMessage('发送失败，请重试');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleToggleEmail() {
+    if (!emailVerified) {
+      setMessage('请先验证邮箱');
+      return;
+    }
+
+    const newEnabled = !emailEnabled;
+    setEmailEnabled(newEnabled);
+
+    if (!supabase) return;
+
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+
+      await fetch('/api/email/config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          email_address: emailAddress,
+          email_enabled: newEnabled,
+        }),
+      });
+    } catch (error) {
+      console.error('Failed to toggle email:', error);
+      setEmailEnabled(!newEnabled);
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#fafafa]">
@@ -285,6 +429,16 @@ export default function Settings() {
             }`}
           >
             💼 企业微信
+          </button>
+          <button
+            onClick={() => setActiveTab('email')}
+            className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all ${
+              activeTab === 'email'
+                ? 'bg-purple-500 text-white shadow-lg'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            📧 邮件推送
           </button>
         </div>
 
@@ -434,6 +588,119 @@ export default function Settings() {
                 <Button onClick={handleSaveWebhook} disabled={saving} className="w-full bg-green-500 hover:bg-green-600 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all">
                   {saving ? '保存中...' : '保存配置'}
                 </Button>
+              </div>
+            </div>
+          </>
+
+        {/* Email Tab */}
+        {activeTab === 'email' && (
+          <>
+            {/* How to guide */}
+            <div className="bg-white border border-gray-100 rounded-2xl p-6 mb-6 hover:shadow-lg transition-all duration-300">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span>📋</span>
+                <span>如何配置？</span>
+              </h3>
+              <ol className="list-decimal list-inside space-y-3 text-sm text-gray-600">
+                <li>填写您的邮箱地址</li>
+                <li>点击"发送验证邮件"</li>
+                <li>打开邮箱，点击验证链接</li>
+                <li>验证成功后即可开启邮件推送</li>
+              </ol>
+            </div>
+
+            {/* Current status */}
+            {hasEmail && (
+              <div className={`border rounded-2xl p-5 mb-6 ${
+                emailVerified 
+                  ? 'bg-green-50 border-green-100' 
+                  : 'bg-yellow-50 border-yellow-100'
+              }`}>
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-xl">{emailVerified ? '✅' : '⚠️'}</span>
+                  <p className={`font-semibold ${
+                    emailVerified ? 'text-green-800' : 'text-yellow-800'
+                  }`}>
+                    {emailVerified ? '邮箱已验证' : '邮箱待验证'}
+                  </p>
+                </div>
+                <p className={`text-sm mb-3 ${
+                  emailVerified ? 'text-green-700' : 'text-yellow-700'
+                }`}>
+                  邮箱: <span className="font-mono px-2 py-0.5 rounded ${
+                    emailVerified ? 'bg-green-100' : 'bg-yellow-100'
+                  }">{emailAddress}</span>
+                </p>
+                {emailVerified && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-green-700">
+                      推送状态: {emailEnabled ? '✅ 已开启' : '⏸️ 已暂停'}
+                    </span>
+                    <button
+                      onClick={handleToggleEmail}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        emailEnabled
+                          ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                          : 'bg-green-500 text-white hover:bg-green-600'
+                      }`}
+                    >
+                      {emailEnabled ? '暂停推送' : '开启推送'}
+                    </button>
+                  </div>
+                )}
+                {!emailVerified && (
+                  <Button 
+                    onClick={handleSendVerification} 
+                    disabled={saving}
+                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-white"
+                  >
+                    {saving ? '发送中...' : '发送验证邮件'}
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Configuration form */}
+            <div className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-lg transition-all duration-300">
+              <h3 className="font-semibold text-gray-900 mb-5">邮箱配置</h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    邮箱地址
+                  </label>
+                  <Input
+                    type="email"
+                    value={emailAddress}
+                    onChange={(e) => setEmailAddress(e.target.value)}
+                    placeholder="your@email.com"
+                    className="font-mono text-sm"
+                  />
+                  <p className="mt-2 text-xs text-gray-500">
+                    修改邮箱后需要重新验证
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleSaveEmail}
+                    disabled={saving || !emailAddress}
+                    className="flex-1"
+                  >
+                    {saving ? '保存中...' : '保存配置'}
+                  </Button>
+                  
+                  {hasEmail && !emailVerified && (
+                    <Button
+                      onClick={handleSendVerification}
+                      disabled={saving}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      {saving ? '发送中...' : '发送验证邮件'}
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </>
