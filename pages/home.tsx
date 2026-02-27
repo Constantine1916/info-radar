@@ -239,13 +239,11 @@ export default function Dashboard() {
     }
   };
 
-  const startEdit = (feed: UserFeed) => {
-    openEditDialog(feed);
-  };
 
-  const cancelEdit = () => { closeDialog(); };
 
-  const handleSaveEdit = async () => { /* handled by dialog */ };
+
+
+
 
   const saveOrder = useCallback(async (orderedFeeds: UserFeed[]) => {
     const token = await getToken();
@@ -423,17 +421,9 @@ export default function Dashboard() {
                 <FeedItem
                   key={feed.id}
                   feed={feed}
-                  editingId={editingId}
-                  editName={editName}
-                  editUrl={editUrl}
-                  setEditName={setEditName}
-                  setEditUrl={setEditUrl}
-                  startEdit={startEdit}
-                  cancelEdit={cancelEdit}
-                  handleSaveEdit={handleSaveEdit}
-                  savingEdit={savingEdit}
-                  handleDeleteFeed={handleDeleteFeed}
-                  handleToggleEnabled={handleToggleEnabled}
+                  onEdit={openEditDialog}
+                  onDelete={handleDeleteFeed}
+                  onToggle={handleToggleEnabled}
                 />
               ))}
             </Reorder.Group>

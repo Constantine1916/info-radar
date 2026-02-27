@@ -1,29 +1,15 @@
 import { useRef } from 'react';
 import { Reorder, useDragControls } from 'framer-motion';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
 import { UserFeed } from '../lib/types';
 
 interface FeedItemProps {
   feed: UserFeed;
-  editingId: string | null;
-  editName: string;
-  editUrl: string;
-  setEditName: (v: string) => void;
-  setEditUrl: (v: string) => void;
-  startEdit: (feed: UserFeed) => void;
-  cancelEdit: () => void;
-  handleSaveEdit: () => void;
-  savingEdit: boolean;
-  handleDeleteFeed: (id: string) => void;
-  handleToggleEnabled: (id: string, enabled: boolean) => void;
+  onEdit: (feed: UserFeed) => void;
+  onDelete: (id: string) => void;
+  onToggle: (id: string, enabled: boolean) => void;
 }
 
-export function FeedItem(props: FeedItemProps) {
-  const { feed, editingId, editName, editUrl, setEditName, setEditUrl, 
-          startEdit, cancelEdit, handleSaveEdit, savingEdit, 
-          handleDeleteFeed, handleToggleEnabled } = props;
-  
+export function FeedItem({ feed, onEdit, onDelete, onToggle }: FeedItemProps) {
   const controls = useDragControls();
   const scrollRaf = useRef<number | null>(null);
 
@@ -64,87 +50,68 @@ export function FeedItem(props: FeedItemProps) {
       dragTransition={{ bounceStiffness: 600, bounceDamping: 20 }}
       whileDrag={{ boxShadow: "0 8px 25px rgba(0,0,0,0.1)", zIndex: 50 }}
     >
-      {editingId === feed.id ? (
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">名称</label>
-            <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">RSS URL</label>
-            <Input value={editUrl} onChange={(e) => setEditUrl(e.target.value)} />
-          </div>
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={cancelEdit} className="text-sm">取消</Button>
-            <Button onClick={handleSaveEdit} disabled={savingEdit || !editName || !editUrl} className="text-sm">
-              {savingEdit ? '保存中...' : '保存'}
-            </Button>
-          </div>
+      <div className="flex items-center justify-between w-full min-w-0">
+        <div
+          className="text-gray-300 hover:text-gray-500 mr-3 flex-shrink-0 cursor-grab active:cursor-grabbing touch-none"
+          onPointerDown={startDrag}
+          title="拖拽排序"
+        >
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
+            <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+            <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
+          </svg>
         </div>
-      ) : (
-        <div className="flex items-center justify-between w-full min-w-0">
-          <div
-            className="text-gray-300 hover:text-gray-500 mr-3 flex-shrink-0 cursor-grab active:cursor-grabbing touch-none"
-            onPointerDown={startDrag}
-            title="拖拽排序"
-          >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
-              <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
-              <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
-            </svg>
-          </div>
-          <div className="flex-1 min-w-0 overflow-hidden">
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-900 truncate">{feed.name}</span>
-              {feed.is_system && (
-                <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded">默认源</span>
-              )}
-            </div>
-            <div className="text-xs text-gray-400 truncate mt-1">{feed.url}</div>
-          </div>
-          <div className="flex items-center gap-1 sm:gap-2 ml-2 sm:ml-4 flex-shrink-0">
-            {/* 开关 */}
-            <button
-              onClick={() => handleToggleEnabled(feed.id, !feed.enabled)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                feed.enabled ? 'bg-blue-500' : 'bg-gray-200'
-              }`}
-              title={feed.enabled ? '已启用' : '已禁用'}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  feed.enabled ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
-            
-            {/* 自定义源才显示编辑/删除按钮 */}
-            {!feed.is_system && (
-              <>
-                <button 
-                  onClick={() => startEdit(feed)} 
-                  className="text-gray-300 hover:text-blue-500 transition-colors" 
-                  title="编辑"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                </button>
-                <button 
-                  onClick={() => handleDeleteFeed(feed.id)} 
-                  className="text-gray-300 hover:text-red-500 transition-colors" 
-                  title="删除"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
-              </>
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-gray-900 truncate">{feed.name}</span>
+            {feed.is_system && (
+              <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded">默认源</span>
             )}
           </div>
+          <div className="text-xs text-gray-400 truncate mt-1">{feed.url}</div>
         </div>
-      )}
+        <div className="flex items-center gap-1 sm:gap-2 ml-2 sm:ml-4 flex-shrink-0">
+          {/* 开关 */}
+          <button
+            onClick={() => onToggle(feed.id, !feed.enabled)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              feed.enabled ? 'bg-blue-500' : 'bg-gray-200'
+            }`}
+            title={feed.enabled ? '已启用' : '已禁用'}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                feed.enabled ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+          
+          {/* 自定义源才显示编辑/删除按钮 */}
+          {!feed.is_system && (
+            <>
+              <button 
+                onClick={() => onEdit(feed)} 
+                className="text-gray-300 hover:text-blue-500 transition-colors" 
+                title="编辑"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+              <button 
+                onClick={() => onDelete(feed.id)} 
+                className="text-gray-300 hover:text-red-500 transition-colors" 
+                title="删除"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </>
+          )}
+        </div>
+      </div>
     </Reorder.Item>
   );
 }
