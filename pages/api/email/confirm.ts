@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // 查找匹配的用户
   const { data: settings, error } = await supabaseAdmin
     .from("user_profiles")
-    .select("user_id")
+    .select("id")
     .eq("email_verification_token", token)
     .single();
 
@@ -42,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       email_verification_token: null,
       updated_at: new Date().toISOString(),
     })
-    .eq("user_id", settings.user_id);
+    .eq("id", settings.id);
 
   if (updateError) {
     return res.status(500).send("Failed to verify email");

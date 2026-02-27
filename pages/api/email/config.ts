@@ -58,7 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { error } = await supabaseAdmin
       .from("user_profiles")
       .upsert({
-        user_id: user.id,
+        id: user.id,
         email_address,
         email_enabled: email_enabled !== undefined ? email_enabled : false,
         email_verified: needsVerification ? false : (existing?.email_verified || false),
