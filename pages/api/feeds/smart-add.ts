@@ -24,7 +24,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // 尝试解析为 RSSHub 支持的平台
+    console.log('[smart-add] Input URL:', url);
+    console.log('[smart-add] URL type:', typeof url);
+    console.log('[smart-add] URL length:', url.length);
+    console.log('[smart-add] URL trimmed:', url.trim());
+    
     const parsed = parseRSSHubURL(url);
+    console.log('[smart-add] Parsed result:', parsed);
     
     if (!parsed) {
       return res.status(400).json({ 
