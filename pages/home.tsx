@@ -26,7 +26,7 @@ export default function Dashboard() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [telegramStatus, setTelegramStatus] = useState<{ verified: boolean; chatId?: string }>({ verified: false });
   const [wecomStatus, setWecomStatus] = useState<{ hasWebhook: boolean }>({ hasWebhook: false });
-  const [emailStatus, setEmailStatus] = useState<{ verified: boolean; enabled: boolean }>({ verified: false, enabled: false });
+  const [emailStatus, setEmailStatus] = useState<{ verified: boolean }>({ verified: false });
   const [pushingTelegram, setPushingTelegram] = useState(false);
   const [pushingWeCom, setPushingWeCom] = useState(false);
   const [pushingEmail, setPushingEmail] = useState(false);
@@ -101,8 +101,7 @@ export default function Dashboard() {
       if (emailRes.ok) {
         const emailData = await emailRes.json();
         setEmailStatus({ 
-          verified: emailData.verified || false, 
-          enabled: emailData.enabled || false 
+          verified: emailData.verified || false
         });
       }
     } catch (error) {
@@ -346,18 +345,14 @@ export default function Dashboard() {
               <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-2xl">📧</div>
               <div>
                 <h3 className="font-semibold text-gray-900">邮件推送</h3>
-                <p className="text-xs text-gray-500">
-                  {emailStatus.verified 
-                    ? (emailStatus.enabled ? '✓ 已开启' : '⏸️ 已暂停') 
-                    : '未验证'}
-                </p>
+                <p className="text-xs text-gray-500">{emailStatus.verified ? '✓ 已验证' : '未验证'}</p>
               </div>
             </div>
             {emailStatus.verified ? (
               <div className="space-y-3">
                 <Button 
                   onClick={() => handlePush('email')} 
-                  disabled={pushingEmail || feeds.length === 0 || !emailStatus.enabled} 
+                  disabled={pushingEmail || feeds.length === 0 || !emailStatus.verified} 
                   className="w-full bg-purple-500 hover:bg-purple-600"
                 >
                   {pushingEmail ? '推送中...' : '立即推送'}

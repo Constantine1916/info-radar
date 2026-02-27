@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 获取邮箱配置
     const { data, error } = await supabaseAdmin
       .from("user_profiles")
-      .select("email_enabled, email_address, email_verified")
+      .select("email_address, email_verified")
       .eq("id", user.id)
       .single();
 
@@ -25,7 +25,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     return res.status(200).json({
-      enabled: data?.email_enabled || false,
       address: data?.email_address || "",
       verified: data?.email_verified || false,
     });
@@ -33,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === "POST") {
     // 保存邮箱配置
-    const { email_address, email_enabled } = req.body;
+    const { email_address } = req.body;
 
     if (!email_address || typeof email_address !== "string") {
       return res.status(400).json({ error: "Invalid email address" });
@@ -60,7 +59,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .upsert({
         id: user.id,
         email_address,
-        email_enabled: email_enabled !== undefined ? email_enabled : false,
         email_verified: needsVerification ? false : (existing?.email_verified || false),
         updated_at: new Date().toISOString(),
       });
@@ -73,6 +71,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       success: true,
       needsVerification 
     });
+  }
+
+  if (req.method === "DELETE") {
+    // 移除邮箱配置
+    const { error } = await supabaseAdmin
+      .from("user_profiles")
+      .update({
+        email_address: null,
+        email_enabled: false,
+        email_verified: false,
+        email_verification_token: null,
+        email_verified_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", user.id);
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    return res.status(200).json({ success: true });
   }
 
   return res.status(405).json({ error: "Method not allowed" });

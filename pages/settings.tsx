@@ -122,7 +122,6 @@ export default function Settings() {
         // 如果没有配置邮箱，使用注册邮箱
         const defaultEmail = data.address || user?.email || '';
         setEmailAddress(defaultEmail);
-        setEmailEnabled(data.enabled || false);
         setEmailVerified(data.verified || false);
         setHasEmail(!!data.address);
       }
@@ -167,6 +166,45 @@ export default function Settings() {
       }
     } catch (error) {
       setMessage('网络错误');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleRemoveEmail() {
+    if (!supabase) return;
+    
+    if (!confirm('确定要移除邮箱配置吗？')) {
+      return;
+    }
+
+    setSaving(true);
+    setMessage('');
+
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+
+      const response = await fetch('/api/email/config', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setMessage('✅ 邮箱配置已移除');
+        setEmailAddress('');
+        setEmailVerified(false);
+        setHasEmail(false);
+        loadEmailConfig();
+      } else {
+        const error = await response.json();
+        setMessage(`移除失败: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Failed to remove email config:', error);
+      setMessage('移除失败，请重试');
     } finally {
       setSaving(false);
     }
@@ -292,7 +330,6 @@ export default function Settings() {
         },
         body: JSON.stringify({
           email_address: emailAddress,
-          email_enabled: emailEnabled,
         }),
       });
 
@@ -633,65 +670,71 @@ export default function Settings() {
                 <span>如何配置？</span>
               </h3>
               <ol className="list-decimal list-inside space-y-3 text-sm text-gray-600">
-                <li>填写您的邮箱地址</li>
-                <li>点击"发送验证邮件"</li>
+                <li>填写您的邮箱地址（默认填充注册邮箱）</li>
+                <li>点击"保存配置"，系统会自动发送验证邮件</li>
                 <li>打开邮箱，点击验证链接</li>
-                <li>验证成功后即可开启邮件推送</li>
+                <li>验证成功后即可接收邮件推送</li>
               </ol>
             </div>
 
             {/* Current status */}
-            {hasEmail && (
-              <div className={`border rounded-2xl p-5 mb-6 ${
-                emailVerified 
-                  ? 'bg-green-50 border-green-100' 
-                  : 'bg-yellow-50 border-yellow-100'
-              }`}>
+            {hasEmail && emailVerified && (
+              <div className="bg-green-50 border border-green-100 rounded-2xl p-5 mb-6">
                 <div className="flex items-center gap-3 mb-3">
-                  <span className="text-xl">{emailVerified ? '✅' : '⚠️'}</span>
-                  <p className={`font-semibold ${
-                    emailVerified ? 'text-green-800' : 'text-yellow-800'
-                  }`}>
-                    {emailVerified ? '邮箱已验证' : '邮箱待验证'}
-                  </p>
+                  <span className="text-xl">✅</span>
+                  <p className="text-green-800 font-semibold">邮箱已验证</p>
                 </div>
-                <p className={`text-sm mb-3 ${
-                  emailVerified ? 'text-green-700' : 'text-yellow-700'
-                }`}>
-                  邮箱: <span className="font-mono px-2 py-0.5 rounded ${
-                    emailVerified ? 'bg-green-100' : 'bg-yellow-100'
-                  }">{emailAddress}</span>
-                </p>
-                {emailVerified && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-green-700">
-                      推送状态: {emailEnabled ? '✅ 已开启' : '⏸️ 已暂停'}
-                    </span>
-                    <button
-                      onClick={handleToggleEmail}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        emailEnabled
-                          ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          : 'bg-green-500 text-white hover:bg-green-600'
-                      }`}
-                    >
-                      {emailEnabled ? '暂停推送' : '开启推送'}
-                    </button>
-                  </div>
-                )}
-                {!emailVerified && (
-                  <div className="text-sm text-yellow-700">
-                    📧 请点击下方"保存配置"按钮，系统会自动发送验证邮件
-                  </div>
-                )}
+                <p className="text-green-700 text-sm mb-4">邮箱: <span className="font-mono bg-green-100 px-2 py-0.5 rounded">{emailAddress}</span></p>
+                <Button
+                  variant="outline"
+                  onClick={handleRemoveEmail}
+                  disabled={saving}
+                  className="text-red-600 hover:bg-red-50 border-red-200 transition-all hover:shadow-md"
+                >
+                  移除配置
+                </Button>
               </div>
             )}
 
-            {/* Configuration form */}
+            {/* Pending verification status */}
+            {hasEmail && !emailVerified && (
+              <div className="bg-yellow-50 border border-yellow-100 rounded-2xl p-5 mb-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-xl">⏳</span>
+                  <p className="text-yellow-800 font-semibold">等待验证</p>
+                </div>
+                <p className="text-yellow-700 text-sm mb-4">
+                  验证邮件已发送至: <span className="font-mono bg-yellow-100 px-2 py-0.5 rounded">{emailAddress}</span>
+                </p>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleSendVerification}
+                    disabled={saving}
+                    variant="outline"
+                    className="text-yellow-700 hover:bg-yellow-100 border-yellow-200"
+                  >
+                    {saving ? '发送中...' : '重新发送验证邮件'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleRemoveEmail}
+                    disabled={saving}
+                    className="text-red-600 hover:bg-red-50 border-red-200"
+                  >
+                    移除配置
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Config form */}
             <div className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-lg transition-all duration-300">
-              <h3 className="font-semibold text-gray-900 mb-5">邮箱配置</h3>
-              
-              <div className="space-y-4">
+              <h3 className="font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                <span>⚙️</span>
+                <span>{hasEmail ? '更新配置' : '配置邮箱'}</span>
+              </h3>
+
+              <div className="space-y-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     邮箱地址
@@ -704,22 +747,17 @@ export default function Settings() {
                     className="font-mono text-sm"
                   />
                   <p className="mt-2 text-xs text-gray-500">
-                    修改邮箱后需要重新验证
+                    💡 修改邮箱后需要重新验证
                   </p>
                 </div>
 
                 <Button
                   onClick={handleSaveEmail}
                   disabled={saving || !emailAddress}
-                  className="w-full"
+                  className="w-full bg-purple-500 hover:bg-purple-600 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
                 >
                   {saving ? '保存中...' : '保存配置'}
                 </Button>
-                {hasEmail && !emailVerified && (
-                  <p className="mt-3 text-xs text-yellow-600">
-                    💡 保存后会自动发送验证邮件到您的邮箱
-                  </p>
-                )}
               </div>
             </div>
           </>

@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // 获取用户邮箱配置
   const { data: settings, error: settingsError } = await supabaseAdmin
     .from("user_profiles")
-    .select("email_address, email_verified, email_enabled")
+    .select("email_address, email_verified")
     .eq("id", user.id)
     .single();
 
@@ -35,10 +35,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!settings.email_verified) {
     return res.status(400).json({ error: "Email not verified" });
-  }
-
-  if (!settings.email_enabled) {
-    return res.status(400).json({ error: "Email push not enabled" });
   }
 
   // 获取用户的 RSS 源
