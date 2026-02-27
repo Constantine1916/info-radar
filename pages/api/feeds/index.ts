@@ -58,6 +58,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: '请至少提供一个字段' });
     }
 
+    // 检查是否为系统默认源（只有 enabled 字段可以修改）
+    const { data: feed } = await supabaseAdmin
+      .from('user_feeds')
+      .select('is_system')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single();
+
+    if (feed?.is_system && (name !== undefined || url !== undefined)) {
+      return res.status(403).json({ error: '系统默认源不可编辑名称和 URL，只能开关' });
+    }
+
     if (url) {
       try { new URL(url); } catch { return res.status(400).json({ error: 'URL 格式不正确' }); }
     }
@@ -86,6 +98,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'DELETE') {
     const { id } = req.body;
     if (!id) return res.status(400).json({ error: 'Missing feed id' });
+
+    // 检查是否为系统默认源
+    const { data: feed } = await supabaseAdmin
+      .from('user_feeds')
+      .select('is_system')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single();
+
+    if (feed?.is_system) {
+      return res.status(403).json({ error: '系统默认源不可删除' });
+    }
 
     const { error } = await supabaseAdmin
       .from('user_feeds')
