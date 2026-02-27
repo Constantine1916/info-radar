@@ -1,7 +1,7 @@
 {
   "name": "info-radar",
   "version": "0.1.0",
-  "description": "\u4e2a\u4eba\u4fe1\u606f\u96f7\u8fbe\u7cfb\u7edf - \u6253\u7834\u4fe1\u606f\u5dee\uff0c\u4e3b\u52a8\u6355\u83b7\u5173\u952e\u4fe1\u606f",
+  "description": "个人信息雷达系统 - 打破信息差，主动捕获关键信息",
   "main": "dist/index.js",
   "scripts": {
     "dev": "next dev",
@@ -51,6 +51,7 @@
     "tailwind-merge": "^3.4.0",
     "xml2js": "^0.6.2",
     "zod": "^4.3.6",
-    "resend": "^4.0.0"
+    "resend": "^4.0.0",
+    "@radix-ui/react-dialog": "^1.0.5"
   }
 }
