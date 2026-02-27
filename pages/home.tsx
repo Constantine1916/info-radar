@@ -295,7 +295,7 @@ export default function Dashboard() {
         </div>
 
         {/* 推送渠道卡片 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
           <div className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-xl transition-all duration-300">
             <div className="flex items-center gap-4 mb-5">
               <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-2xl">✉️</div>
@@ -332,6 +332,33 @@ export default function Dashboard() {
               </div>
             ) : (
               <Button onClick={() => router.push('/settings')} className="w-full bg-green-500 hover:bg-green-600">绑定企业微信</Button>
+            )}
+          </div>
+          <div className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center gap-4 mb-5">
+              <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-2xl">📧</div>
+              <div>
+                <h3 className="font-semibold text-gray-900">邮件推送</h3>
+                <p className="text-xs text-gray-500">
+                  {emailStatus.verified 
+                    ? (emailStatus.enabled ? '✓ 已开启' : '⏸️ 已暂停') 
+                    : '未验证'}
+                </p>
+              </div>
+            </div>
+            {emailStatus.verified ? (
+              <div className="space-y-3">
+                <Button 
+                  onClick={() => handlePush('email')} 
+                  disabled={pushingEmail || feeds.length === 0 || !emailStatus.enabled} 
+                  className="w-full bg-purple-500 hover:bg-purple-600"
+                >
+                  {pushingEmail ? '推送中...' : '立即推送'}
+                </Button>
+                <Button variant="outline" onClick={() => router.push('/settings')} className="w-full">管理配置</Button>
+              </div>
+            ) : (
+              <Button onClick={() => router.push('/settings')} className="w-full bg-purple-500 hover:bg-purple-600">绑定邮箱</Button>
             )}
           </div>
         </div>
