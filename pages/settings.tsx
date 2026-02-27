@@ -119,7 +119,9 @@ export default function Settings() {
 
       if (response.ok) {
         const data = await response.json();
-        setEmailAddress(data.address || '');
+        // 如果没有配置邮箱，使用注册邮箱
+        const defaultEmail = data.address || user?.email || '';
+        setEmailAddress(defaultEmail);
         setEmailEnabled(data.enabled || false);
         setEmailVerified(data.verified || false);
         setHasEmail(!!data.address);
@@ -296,11 +298,30 @@ export default function Settings() {
 
       if (response.ok) {
         const data = await response.json();
-        setMessage(data.needsVerification ? '保存成功！请发送验证邮件' : '保存成功！');
         setHasEmail(true);
+        
+        // 如果需要验证，自动发送验证邮件
         if (data.needsVerification) {
           setEmailVerified(false);
+          setMessage('保存成功！正在发送验证邮件...');
+          
+          // 自动发送验证邮件
+          const verifyRes = await fetch('/api/email/verify', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          
+          if (verifyRes.ok) {
+            setMessage('✅ 验证邮件已发送，请查收邮箱');
+          } else {
+            setMessage('保存成功，但发送验证邮件失败，请手动发送');
+          }
+        } else {
+          setMessage('保存成功！');
         }
+        
         loadEmailConfig();
       } else {
         const error = await response.json();
@@ -659,13 +680,9 @@ export default function Settings() {
                   </div>
                 )}
                 {!emailVerified && (
-                  <Button 
-                    onClick={handleSendVerification} 
-                    disabled={saving}
-                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-white"
-                  >
-                    {saving ? '发送中...' : '发送验证邮件'}
-                  </Button>
+                  <div className="text-sm text-yellow-700">
+                    📧 请点击下方"保存配置"按钮，系统会自动发送验证邮件
+                  </div>
                 )}
               </div>
             )}
@@ -691,26 +708,18 @@ export default function Settings() {
                   </p>
                 </div>
 
-                <div className="flex gap-3">
-                  <Button
-                    onClick={handleSaveEmail}
-                    disabled={saving || !emailAddress}
-                    className="flex-1"
-                  >
-                    {saving ? '保存中...' : '保存配置'}
-                  </Button>
-                  
-                  {hasEmail && !emailVerified && (
-                    <Button
-                      onClick={handleSendVerification}
-                      disabled={saving}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      {saving ? '发送中...' : '发送验证邮件'}
-                    </Button>
-                  )}
-                </div>
+                <Button
+                  onClick={handleSaveEmail}
+                  disabled={saving || !emailAddress}
+                  className="w-full"
+                >
+                  {saving ? '保存中...' : '保存配置'}
+                </Button>
+                {hasEmail && !emailVerified && (
+                  <p className="mt-3 text-xs text-yellow-600">
+                    💡 保存后会自动发送验证邮件到您的邮箱
+                  </p>
+                )}
               </div>
             </div>
           </>
