@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { data: settings, error: settingsError } = await supabaseAdmin
     .from("user_profiles")
     .select("email_address")
-    .eq("user_id", user.id)
+    .eq("id", user.id)
     .single();
 
   if (settingsError || !settings?.email_address) {
@@ -40,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       email_verification_token: verificationToken,
       updated_at: new Date().toISOString(),
     })
-    .eq("user_id", user.id);
+    .eq("id", user.id);
 
   if (updateError) {
     return res.status(500).json({ error: "Failed to save verification token" });

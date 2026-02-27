@@ -17,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data, error } = await supabaseAdmin
       .from("user_profiles")
       .select("email_enabled, email_address, email_verified")
-      .eq("user_id", user.id)
+      .eq("id", user.id)
       .single();
 
     if (error) {
@@ -49,7 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: existing } = await supabaseAdmin
       .from("user_profiles")
       .select("email_address, email_verified")
-      .eq("user_id", user.id)
+      .eq("id", user.id)
       .single();
 
     // 如果邮箱地址改变，需要重新验证
