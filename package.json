@@ -52,6 +52,7 @@
     "xml2js": "^0.6.2",
     "zod": "^4.3.6",
     "resend": "^4.0.0",
-    "@radix-ui/react-dialog": "^1.0.5"
+    "@radix-ui/react-dialog": "^1.0.5",
+    "antd": "^5.22.6"
   }
 }

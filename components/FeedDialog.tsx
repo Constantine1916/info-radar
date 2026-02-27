@@ -1,14 +1,5 @@
 import { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from './ui/dialog';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
+import { Modal, Input, Form } from 'antd';
 
 interface FeedDialogProps {
   open: boolean;
@@ -27,90 +18,95 @@ export function FeedDialog({
   onClose,
   onSubmit,
 }: FeedDialogProps) {
-  const [url, setUrl] = useState(initialUrl);
-  const [name, setName] = useState(initialName);
+  const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    setUrl(initialUrl);
-    setName(initialName);
-  }, [initialUrl, initialName, open]);
-
-  const handleSubmit = async () => {
-    if (!url.trim()) {
-      alert('请输入 URL');
-      return;
+    if (open) {
+      form.setFieldsValue({
+        url: initialUrl,
+        name: initialName,
+      });
     }
+  }, [open, initialUrl, initialName, form]);
 
-    setSubmitting(true);
+  const handleOk = async () => {
     try {
-      await onSubmit(url.trim(), name.trim());
-      setUrl('');
-      setName('');
+      const values = await form.validateFields();
+      setSubmitting(true);
+      await onSubmit(values.url.trim(), values.name?.trim() || '');
+      form.resetFields();
+    } catch (error) {
+      // 表单验证失败或提交失败
+      console.error('Form error:', error);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleClose = () => {
-    setUrl('');
-    setName('');
+  const handleCancel = () => {
+    form.resetFields();
     onClose();
   };
 
   return (
-    <Dialog open={open} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>{mode === 'add' ? '添加自定义源' : '编辑 RSS 源'}</DialogTitle>
-          <DialogDescription>
-            {mode === 'add'
-              ? '支持直接粘贴 Twitter、GitHub、知乎、B站 等平台链接，自动转换为 RSS 源'
-              : '修改 RSS 源的名称或 URL'}
-          </DialogDescription>
-        </DialogHeader>
+    <Modal
+      title={mode === 'add' ? '添加自定义源' : '编辑 RSS 源'}
+      open={open}
+      onOk={handleOk}
+      onCancel={handleCancel}
+      confirmLoading={submitting}
+      okText={mode === 'add' ? '添加' : '保存'}
+      cancelText="取消"
+      width={600}
+      destroyOnClose
+    >
+      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <p className="text-sm text-blue-800 mb-1">
+          💡 <strong>智能识别：</strong>
+          {mode === 'add'
+            ? '支持直接粘贴 Twitter、GitHub、知乎、B站 等平台链接，自动转换为 RSS 源'
+            : '修改 RSS 源的名称或 URL'}
+        </p>
+        {mode === 'add' && (
+          <p className="text-xs text-blue-600">
+            例如：https://x.com/elonmusk 或 https://github.com/trending
+          </p>
+        )}
+      </div>
 
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <label htmlFor="url" className="text-sm font-medium">
-              URL <span className="text-red-500">*</span>
-            </label>
-            <Input
-              id="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://x.com/username 或 https://example.com/feed.xml"
-              disabled={submitting}
-              className="font-mono text-sm"
-            />
-            <p className="text-xs text-gray-500">
-              例如：https://x.com/elonmusk 或 https://github.com/trending
-            </p>
-          </div>
+      <Form
+        form={form}
+        layout="vertical"
+        initialValues={{ url: initialUrl, name: initialName }}
+      >
+        <Form.Item
+          label={<span className="font-medium">URL <span className="text-red-500">*</span></span>}
+          name="url"
+          rules={[{ required: true, message: '请输入 URL' }]}
+          extra="例如：https://x.com/elonmusk 或 https://github.com/trending"
+        >
+          <Input
+            placeholder="https://x.com/username 或 https://example.com/feed.xml"
+            disabled={submitting}
+            className="font-mono"
+          />
+        </Form.Item>
 
-          <div className="grid gap-2">
-            <label htmlFor="name" className="text-sm font-medium">
+        <Form.Item
+          label={
+            <span className="font-medium">
               名称 <span className="text-gray-400 font-normal">(可选，智能识别时自动填充)</span>
-            </label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="例如：GitHub Trending"
-              disabled={submitting}
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={submitting}>
-            取消
-          </Button>
-          <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting ? '处理中...' : mode === 'add' ? '添加' : '保存'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            </span>
+          }
+          name="name"
+        >
+          <Input
+            placeholder="例如：GitHub Trending"
+            disabled={submitting}
+          />
+        </Form.Item>
+      </Form>
+    </Modal>
   );
 }
