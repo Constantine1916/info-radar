@@ -672,9 +672,14 @@ export default function Settings() {
               <ol className="list-decimal list-inside space-y-3 text-sm text-gray-600">
                 <li>填写您的邮箱地址（默认填充注册邮箱）</li>
                 <li>点击"保存配置"，系统会自动发送验证邮件</li>
-                <li>打开邮箱，点击验证链接</li>
+                <li>打开邮箱，点击验证链接（<strong>请检查垃圾邮件</strong>）</li>
                 <li>验证成功后即可接收邮件推送</li>
               </ol>
+              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-xs text-yellow-800">
+                  ⚠️ <strong>重要提示：</strong>QQ 邮箱、163 邮箱等国内邮箱可能无法接收验证邮件，建议使用 <strong>Gmail</strong>、<strong>Outlook</strong> 或企业邮箱。
+                </p>
+              </div>
             </div>
 
             {/* Current status */}
