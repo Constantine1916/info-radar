@@ -61,7 +61,8 @@ export class SendCloudClient {
       if (data.result && data.statusCode === 200) {
         return { success: true };
       } else {
-        return { success: false, error: data.message || "Unknown error" };
+        console.error("SendCloud API error:", JSON.stringify(data, null, 2));
+        return { success: false, error: data.message || JSON.stringify(data) };
       }
     } catch (error: any) {
       console.error("SendCloud error:", error);
