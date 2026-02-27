@@ -215,3 +215,4 @@ MIT License - 自由使用和修改
 // git test 1770136175
 // auto deploy test
 # Email push enabled
+# SendCloud integrated
