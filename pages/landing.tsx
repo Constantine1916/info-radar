@@ -73,10 +73,10 @@ export default function Home() {
             </div>
 
             <div className="bg-white border border-gray-100 p-8 rounded-2xl hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group">
-              <div className="text-3xl mb-4 transform group-hover:scale-110 transition-transform duration-300">⚡</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">即时推送</h3>
+              <div className="text-3xl mb-4 transform group-hover:scale-110 transition-transform duration-300">⏰</div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">定时推送</h3>
               <p className="text-sm text-gray-500 leading-relaxed">
-                一键推送最新内容，第一时间掌握重要资讯
+                每日早上 9 点自动推送，也可随时手动推送最新内容
               </p>
             </div>
           </div>
