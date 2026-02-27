@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // 获取用户邮箱配置
   const { data: settings, error: settingsError } = await supabaseAdmin
-    .from("user_settings")
+    .from("user_profiles")
     .select("email_address")
     .eq("user_id", user.id)
     .single();
@@ -35,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   
   // 保存 token
   const { error: updateError } = await supabaseAdmin
-    .from("user_settings")
+    .from("user_profiles")
     .update({
       email_verification_token: verificationToken,
       updated_at: new Date().toISOString(),

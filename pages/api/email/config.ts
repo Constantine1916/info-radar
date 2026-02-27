@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === "GET") {
     // 获取邮箱配置
     const { data, error } = await supabaseAdmin
-      .from("user_settings")
+      .from("user_profiles")
       .select("email_enabled, email_address, email_verified")
       .eq("user_id", user.id)
       .single();
@@ -47,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // 检查是否已有配置
     const { data: existing } = await supabaseAdmin
-      .from("user_settings")
+      .from("user_profiles")
       .select("email_address, email_verified")
       .eq("user_id", user.id)
       .single();
@@ -56,7 +56,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const needsVerification = existing?.email_address !== email_address;
 
     const { error } = await supabaseAdmin
-      .from("user_settings")
+      .from("user_profiles")
       .upsert({
         user_id: user.id,
         email_address,
