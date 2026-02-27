@@ -113,25 +113,50 @@ export default function Dashboard() {
 
 
   const handleAddFeed = async () => {
-    if (!newFeedName || !newFeedUrl) return;
+    if (!newFeedUrl) return;
     setAddingFeed(true);
     const token = await getToken();
     if (!token) { setAddingFeed(false); return; }
 
     try {
-      const res = await fetch('/api/feeds', {
+      // 先尝试智能识别
+      const smartRes = await fetch('/api/feeds/smart-add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name: newFeedName, url: newFeedUrl }),
+        body: JSON.stringify({ url: newFeedUrl }),
       });
-      const data = await res.json();
-      if (res.ok) {
-        setFeeds(prev => [...prev, data.feed]);
+      const smartData = await smartRes.json();
+      
+      if (smartRes.ok) {
+        // 智能识别成功
+        setFeeds(prev => [...prev, smartData.feed]);
         setNewFeedName('');
         setNewFeedUrl('');
         setShowAddForm(false);
+        alert(`✓ 已添加：${smartData.feed.name}`);
+      } else if (smartData.hint) {
+        // 智能识别失败，提示用户
+        alert(`${smartData.error}
+
+${smartData.hint}`);
+      } else if (newFeedName) {
+        // 如果用户填写了名称，尝试手动添加
+        const manualRes = await fetch('/api/feeds', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ name: newFeedName, url: newFeedUrl }),
+        });
+        const manualData = await manualRes.json();
+        if (manualRes.ok) {
+          setFeeds(prev => [...prev, manualData.feed]);
+          setNewFeedName('');
+          setNewFeedUrl('');
+          setShowAddForm(false);
+        } else {
+          alert(manualData.error || '添加失败');
+        }
       } else {
-        alert(data.error || '添加失败');
+        alert(smartData.error || '添加失败');
       }
     } catch { alert('网络错误'); }
     finally { setAddingFeed(false); }
@@ -379,15 +404,29 @@ export default function Dashboard() {
 
           {showAddForm && (
             <div className="mb-6 p-5 bg-gray-50 rounded-xl space-y-4">
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-xs text-blue-800">
+                  💡 <strong>智能识别：</strong>支持直接粘贴 Twitter、GitHub、知乎、B站 等平台链接，自动转换为 RSS 源
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  例如：https://twitter.com/elonmusk 或 https://github.com/trending
+                </p>
+              </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">名称</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">URL 或 RSS 地址</label>
+                <Input 
+                  value={newFeedUrl} 
+                  onChange={(e) => setNewFeedUrl(e.target.value)} 
+                  placeholder="https://twitter.com/username 或 https://example.com/feed.xml" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  名称 <span className="text-gray-400 font-normal">(可选，智能识别时自动填充)</span>
+                </label>
                 <Input value={newFeedName} onChange={(e) => setNewFeedName(e.target.value)} placeholder="例如：GitHub Trending" />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">RSS URL</label>
-                <Input value={newFeedUrl} onChange={(e) => setNewFeedUrl(e.target.value)} placeholder="https://example.com/feed.xml" />
-              </div>
-              <Button onClick={handleAddFeed} disabled={addingFeed || !newFeedName || !newFeedUrl} className="w-full">
+              <Button onClick={handleAddFeed} disabled={addingFeed || !newFeedUrl} className="w-full">
                 {addingFeed ? '添加中...' : '添加源'}
               </Button>
             </div>
