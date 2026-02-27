@@ -591,6 +591,7 @@ export default function Settings() {
               </div>
             </div>
           </>
+        )}
 
         {/* Email Tab */}
         {activeTab === 'email' && (
