@@ -248,13 +248,13 @@ export default function Settings() {
       {/* Header */}
       <header className="border-b border-gray-100 bg-white/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <Link href="/dashboard" className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors group">
+          <Link href="/home" className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors group">
             <svg className="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
             <span className="text-gray-600 group-hover:text-gray-900 transition-colors">返回</span>
           </Link>
-          <Link href="/dashboard" className="text-xl font-semibold text-gray-900">
+          <Link href="/home" className="text-xl font-semibold text-gray-900">
             📡 Info Radar
           </Link>
           <div className="w-20"></div>

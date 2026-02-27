@@ -257,9 +257,12 @@ export default function Dashboard() {
       <header className="border-b border-gray-100 bg-white/80 backdrop-blur-xl sticky top-0 z-50 overflow-x-hidden">
         <div className="container mx-auto px-3 sm:px-4 py-4 flex justify-between items-center max-w-full">
           <Link href="/" className="text-xl font-semibold text-gray-900">📡 Info Radar</Link>
-          <div className="flex items-center gap-2 sm:gap-6">
-            <span className="text-sm text-gray-400 truncate max-w-[120px] sm:max-w-none">{user?.email}</span>
-            <Button variant="ghost" onClick={() => signOut()}>退出</Button>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <span className="text-sm text-gray-400 truncate max-w-[120px] sm:max-w-none hidden sm:inline">{user?.email}</span>
+            <Link href="/history">
+              <Button variant="ghost" size="sm">推送历史</Button>
+            </Link>
+            <Button variant="ghost" size="sm" onClick={() => signOut()}>退出</Button>
           </div>
         </div>
       </header>

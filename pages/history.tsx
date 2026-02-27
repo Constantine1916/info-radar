@@ -77,12 +77,15 @@ export default function History() {
 
       <header className="border-b border-gray-100 bg-white/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <Link href="/dashboard" className="flex items-center gap-3 group">
+          <Link href="/home" className="flex items-center gap-3 group">
             <span className="text-2xl">📡</span>
             <span className="text-xl font-semibold text-gray-900 group-hover:text-gray-700 transition-colors">Info Radar</span>
           </Link>
           <div className="flex items-center gap-6">
             <span className="text-sm text-gray-400">{user?.email}</span>
+            <Link href="/home">
+              <Button variant="ghost" size="sm">返回首页</Button>
+            </Link>
             <Button variant="ghost" size="sm" onClick={() => signOut()} className="hover:bg-gray-100">退出</Button>
           </div>
         </div>
