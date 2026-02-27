@@ -61,10 +61,12 @@ export interface SystemFeed {
 }
 
 export const SYSTEM_FEEDS: SystemFeed[] = [
-  { name: 'Hacker News', url: 'https://hnrss.org/frontpage', isSystem: true },
-  { name: '少数派', url: 'https://sspai.com/feed', isSystem: true },
-  { name: '36氪', url: 'https://36kr.com/feed', isSystem: true },
-  { name: '知乎热榜', url: 'http://101.32.243.232:1200/zhihu/hot', isSystem: true },
+  { name: 'Hacker News', url: 'http://101.32.243.232:1200/hackernews/newest', isSystem: true },
+  { name: '36氪', url: 'http://101.32.243.232:1200/36kr/newsflashes', isSystem: true },
+  { name: '少数派', url: 'http://101.32.243.232:1200/sspai/index', isSystem: true },
+  { name: 'GitHub Trending 每日', url: 'http://101.32.243.232:1200/github/trending/daily', isSystem: true },
+  { name: 'GitHub Trending 每周', url: 'http://101.32.243.232:1200/github/trending/weekly', isSystem: true },
+  { name: '知乎热榜', url: 'http://101.32.243.232:1200/zhihu/hotlist', isSystem: true },
   { name: 'B站热榜', url: 'http://101.32.243.232:1200/bilibili/ranking/0/3/1', isSystem: true },
 ];
 
