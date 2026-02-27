@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
-import { resend, FROM_EMAIL } from "../../../lib/email/resend-client";
+import { sendEmail } from "../../../lib/email/email-sender";
 import { generateVerificationEmailHTML } from "../../../lib/email/templates";
 import crypto from "crypto";
 
