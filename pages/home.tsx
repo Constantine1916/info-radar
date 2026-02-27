@@ -412,7 +412,7 @@ export default function Dashboard() {
             </Button>
           </div>
 
-          {feeds.length === 0 && !showAddForm ? (
+          {feeds.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-5xl mb-4">📡</div>
               <p className="text-gray-400">还没有 RSS 源</p>
