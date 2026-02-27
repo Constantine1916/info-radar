@@ -98,6 +98,13 @@ export default function Dashboard() {
         const data = await wecomRes.json();
         setWecomStatus({ hasWebhook: data.hasWebhook });
       }
+      if (emailRes.ok) {
+        const emailData = await emailRes.json();
+        setEmailStatus({ 
+          verified: emailData.verified || false, 
+          enabled: emailData.enabled || false 
+        });
+      }
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
