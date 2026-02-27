@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../lib/supabase';
+import { supabase, supabaseAdmin } from '../../../lib/supabase-admin';
 import { SYSTEM_FEEDS } from '../../../lib/types';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // 检查是否已经初始化过
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseAdmin
       .from('user_feeds')
       .select('id')
       .eq('user_id', user.id)
@@ -41,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       sort_order: index,
     }));
 
-    const { error: insertError } = await supabase
+    const { error: insertError } = await supabaseAdmin
       .from('user_feeds')
       .insert(feedsToInsert);
 
