@@ -60,7 +60,7 @@ export function FeedItem(props: FeedItemProps) {
       value={feed}
       dragListener={false}
       dragControls={controls}
-      className="p-4 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm bg-white list-none"
+      className="p-3 sm:p-4 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm bg-white list-none"
       dragTransition={{ bounceStiffness: 600, bounceDamping: 20 }}
       whileDrag={{ boxShadow: "0 8px 25px rgba(0,0,0,0.1)", zIndex: 50 }}
     >
@@ -82,7 +82,7 @@ export function FeedItem(props: FeedItemProps) {
           </div>
         </div>
       ) : (
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between w-full min-w-0">
           <div
             className="text-gray-300 hover:text-gray-500 mr-3 flex-shrink-0 cursor-grab active:cursor-grabbing touch-none"
             onPointerDown={startDrag}
@@ -94,7 +94,7 @@ export function FeedItem(props: FeedItemProps) {
               <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
             </svg>
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 overflow-hidden">
             <div className="flex items-center gap-2">
               <span className="font-medium text-gray-900 truncate">{feed.name}</span>
               {feed.is_system && (
@@ -103,7 +103,7 @@ export function FeedItem(props: FeedItemProps) {
             </div>
             <div className="text-xs text-gray-400 truncate mt-1">{feed.url}</div>
           </div>
-          <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 ml-2 sm:ml-4 flex-shrink-0">
             {/* 开关 */}
             <button
               onClick={() => handleToggleEnabled(feed.id, !feed.enabled)}
