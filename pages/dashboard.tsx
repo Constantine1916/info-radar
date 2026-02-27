@@ -31,7 +31,8 @@ export default function Dashboard() {
   const fetchStartedRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 判断系统源是否已订阅
+  useEffect(() => {
+    if (authLoading) {
       return;
     }
     if (signedIn && !fetchStartedRef.current) {
