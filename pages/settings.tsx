@@ -351,7 +351,7 @@ export default function Settings() {
           });
           
           if (verifyRes.ok) {
-            setMessage('✅ 验证邮件已发送，请查收邮箱');
+            setMessage('✅ 验证邮件已发送！请查收邮箱（包括垃圾邮件文件夹）');
           } else {
             setMessage('保存成功，但发送验证邮件失败，请手动发送');
           }
@@ -390,7 +390,7 @@ export default function Settings() {
       });
 
       if (response.ok) {
-        setMessage('✅ 验证邮件已发送，请查收邮箱');
+        setMessage('✅ 验证邮件已发送！请查收邮箱（包括垃圾邮件文件夹）');
       } else {
         const error = await response.json();
         setMessage(`发送失败: ${error.error}`);

@@ -53,7 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await resend.emails.send({
       from: FROM_EMAIL,
       to: settings.email_address,
-      subject: "📡 Info Radar - 验证您的邮箱",
+      subject: "【Info Radar】邮箱验证 - 请点击确认",
       html: generateVerificationEmailHTML(verificationUrl),
     });
 

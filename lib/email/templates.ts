@@ -82,21 +82,35 @@ export function generateVerificationEmailHTML(verificationUrl: string): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Info Radar 邮箱验证</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #fafafa;">
-  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0;">
     <div style="padding: 48px 24px; text-align: center;">
       <div style="font-size: 64px; margin-bottom: 24px;">📧</div>
-      <h1 style="margin: 0 0 16px 0; color: #1a1a1a; font-size: 24px;">验证您的邮箱</h1>
+      <h1 style="margin: 0 0 16px 0; color: #1a1a1a; font-size: 24px;">Info Radar 邮箱验证</h1>
+      <p style="margin: 0 0 8px 0; color: #666; font-size: 14px; line-height: 1.6;">
+        您正在绑定此邮箱用于接收 Info Radar 的信息推送。
+      </p>
       <p style="margin: 0 0 32px 0; color: #666; font-size: 14px; line-height: 1.6;">
-        点击下方按钮验证邮箱，即可开启 Info Radar 的邮件推送服务
+        请点击下方按钮完成验证：
       </p>
       <a href="${verificationUrl}" style="display: inline-block; padding: 14px 32px; background-color: #667eea; color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 500;">
-        验证邮箱
+        立即验证邮箱
       </a>
-      <p style="margin: 32px 0 0 0; color: #999; font-size: 12px;">
-        如果按钮无法点击，请复制以下链接到浏览器：<br>
-        <span style="color: #667eea; word-break: break-all;">${verificationUrl}</span>
+      <p style="margin: 32px 0 16px 0; color: #999; font-size: 12px;">
+        如果按钮无法点击，请复制以下链接到浏览器访问：
+      </p>
+      <p style="margin: 0; padding: 12px; background-color: #f5f5f5; border-radius: 4px; color: #667eea; font-size: 12px; word-break: break-all;">
+        ${verificationUrl}
+      </p>
+      <p style="margin: 24px 0 0 0; color: #999; font-size: 12px;">
+        如果这不是您的操作，请忽略此邮件。
+      </p>
+    </div>
+    <div style="padding: 16px 24px; background-color: #f9f9f9; border-top: 1px solid #e0e0e0; text-align: center;">
+      <p style="margin: 0; color: #999; font-size: 11px;">
+        此邮件由 Info Radar 系统自动发送，请勿回复。
       </p>
     </div>
   </div>
