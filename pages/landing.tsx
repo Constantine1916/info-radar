@@ -19,7 +19,7 @@ export default function Home() {
     <div className="min-h-screen bg-[#fafafa]">
       <Head>
         <title>Info Radar - 打破信息差</title>
-        <meta name="description" content="个人信息雷达系统 - 智能信息聚合，精准推送" />
+        <meta name="description" content="个人信息雷达系统 - 智能信息聚合，多渠道推送" />
       </Head>
 
       <main className="container mx-auto px-4 py-20">
@@ -36,7 +36,7 @@ export default function Home() {
               打破信息差
             </p>
             <p className="text-base text-gray-400 max-w-xl mx-auto leading-relaxed">
-              智能聚合全网信息，精准推送到 Telegram，让重要资讯不再错过
+              聚合全网 RSS 信息源，支持 Telegram、企业微信、邮件多渠道推送
             </p>
           </div>
 
@@ -57,26 +57,26 @@ export default function Home() {
           {/* Features Grid */}
           <div className="grid md:grid-cols-3 gap-6">
             <div className="bg-white border border-gray-100 p-8 rounded-2xl hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group">
-              <div className="text-3xl mb-4 transform group-hover:scale-110 transition-transform duration-300">🎯</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">个性化订阅</h3>
+              <div className="text-3xl mb-4 transform group-hover:scale-110 transition-transform duration-300">📰</div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">RSS 订阅管理</h3>
               <p className="text-sm text-gray-500 leading-relaxed">
-                选择你关注的领域，AI 智能筛选高质量内容
-              </p>
-            </div>
-
-            <div className="bg-white border border-gray-100 p-8 rounded-2xl hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group">
-              <div className="text-3xl mb-4 transform group-hover:scale-110 transition-transform duration-300">✨</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">智能过滤</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                自动过滤标题党和低质量内容，节省阅读时间
+                内置热门信息源，支持添加自定义 RSS，自由管理订阅列表
               </p>
             </div>
 
             <div className="bg-white border border-gray-100 p-8 rounded-2xl hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group">
               <div className="text-3xl mb-4 transform group-hover:scale-110 transition-transform duration-300">📱</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Telegram 推送</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">多渠道推送</h3>
               <p className="text-sm text-gray-500 leading-relaxed">
-                每日定时推送，第一时间掌握重要信息
+                支持 Telegram、企业微信、邮件推送，随时随地接收信息
+              </p>
+            </div>
+
+            <div className="bg-white border border-gray-100 p-8 rounded-2xl hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group">
+              <div className="text-3xl mb-4 transform group-hover:scale-110 transition-transform duration-300">⚡</div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">即时推送</h3>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                一键推送最新内容，第一时间掌握重要资讯
               </p>
             </div>
           </div>
