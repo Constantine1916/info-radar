@@ -18,7 +18,7 @@ export default function Login() {
   // 如果已经登录，直接跳转到 Dashboard
   useEffect(() => {
     if (!authLoading && signedIn) {
-      router.push('/dashboard');
+      router.push('/home');
     }
   }, [authLoading, signedIn, router]);
 
@@ -45,7 +45,7 @@ export default function Login() {
       // 登录成功，等待 auth 状态更新后自动跳转
       console.log('Login successful, waiting for auth state...');
       setTimeout(() => {
-        router.push('/dashboard');
+        router.push('/home');
       }, 500);
     }
   };

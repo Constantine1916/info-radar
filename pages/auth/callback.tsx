@@ -25,11 +25,11 @@ export default function Callback() {
 
         setProcessed(true);
         // Redirect to dashboard
-        router.push('/dashboard');
+        router.push('/home');
       } else {
         // No hash or no supabase, just redirect to dashboard
         setProcessed(true);
-        router.push('/dashboard');
+        router.push('/home');
       }
     };
 

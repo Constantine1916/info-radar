@@ -19,7 +19,7 @@ export default function Signup() {
   // 如果已经登录，直接跳转到 Dashboard
   useEffect(() => {
     if (!authLoading && signedIn && success) {
-      router.push('/dashboard');
+      router.push('/home');
     }
   }, [authLoading, signedIn, success, router]);
 
