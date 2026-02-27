@@ -160,16 +160,21 @@ export default function Dashboard() {
           const added: UserFeed[] = [];
           for (const sf of SYSTEM_FEEDS) {
             try {
+              console.log('[Init] Adding default feed:', sf.name);
               const addRes = await fetch('/api/feeds', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ name: sf.name, url: sf.url }),
+                body: JSON.stringify({ name: sf.name, url: sf.url, is_system: true }),
               });
               if (addRes.ok) {
                 const d = await addRes.json();
                 added.push(d.feed);
+              } else {
+                console.error('[Init] Failed to add', sf.name, await addRes.text());
               }
-            } catch {}
+            } catch (err) {
+              console.error('[Init] Exception adding', sf.name, err);
+            }
           }
           setFeeds(added);
         } else {
