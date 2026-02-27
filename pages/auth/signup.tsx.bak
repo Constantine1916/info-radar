@@ -91,7 +91,7 @@ export default function Signup() {
         <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-soft">
           <form onSubmit={handleSignup} className="space-y-4">
             {error && (
-              <div className={`p-3 text-sm rounded-lg ${error.includes('注册成功') ? 'text-green-700 bg-green-50 border border-green-200' : 'text-red-600 bg-red-50'}`}>
+              <div className={}>
                 {error}
               </div>
             )}
