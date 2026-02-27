@@ -38,7 +38,7 @@ export async function sendEmail(params: SendEmailParams): Promise<{
   const isChina = isChinaEmail(params.to);
 
   // 如果是国内邮箱且 SendCloud 已配置，使用 SendCloud
-  if (false && isChina) {  // 暂时禁用 SendCloud
+  if (isChina) {
     const sendcloud = getSendCloudClient();
     if (sendcloud) {
       console.log(`Sending to China email ${params.to} via SendCloud`);

@@ -96,7 +96,7 @@ export function getSendCloudClient(): SendCloudClient | null {
   return new SendCloudClient({
     apiUser: process.env.SENDCLOUD_API_USER,
     apiKey: process.env.SENDCLOUD_API_KEY,
-    from: process.env.SENDCLOUD_FROM_EMAIL || "noreply@sendcloud.org",
+    from: process.env.SENDCLOUD_FROM_EMAIL || "noreply@rm2apk.sendcloud.org",
     fromName: process.env.SENDCLOUD_FROM_NAME || "Info Radar",
   });
 }
