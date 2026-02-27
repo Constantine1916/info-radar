@@ -47,6 +47,11 @@ export default function Dashboard() {
     return session?.access_token || null;
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+    router.push('/landing');
+  };
+
   const fetchData = async () => {
     const token = await getToken();
     if (!token) { setLoading(false); return; }
@@ -262,7 +267,7 @@ export default function Dashboard() {
             <Link href="/history">
               <Button variant="ghost" size="sm">推送历史</Button>
             </Link>
-            <Button variant="ghost" size="sm" onClick={() => signOut()}>退出</Button>
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>退出</Button>
           </div>
         </div>
       </header>

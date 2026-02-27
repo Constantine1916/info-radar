@@ -23,6 +23,11 @@ interface PushRecord {
 }
 
 export default function History() {
+  const handleSignOut = async () => {
+    await signOut();
+    router.push('/landing');
+  };
+
   const { user, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -86,7 +91,7 @@ export default function History() {
             <Link href="/home">
               <Button variant="ghost" size="sm">返回首页</Button>
             </Link>
-            <Button variant="ghost" size="sm" onClick={() => signOut()} className="hover:bg-gray-100">退出</Button>
+            <Button variant="ghost" size="sm" onClick={handleSignOut} className="hover:bg-gray-100">退出</Button>
           </div>
         </div>
       </header>
