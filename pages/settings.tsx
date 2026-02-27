@@ -677,7 +677,7 @@ export default function Settings() {
               </ol>
               <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <p className="text-xs text-yellow-800">
-                  ⚠️ <strong>重要提示：</strong>QQ 邮箱、163 邮箱等国内邮箱可能无法接收验证邮件，建议使用 <strong>Gmail</strong>、<strong>Outlook</strong> 或企业邮箱。
+                  ⚠️ 重要提示：QQ 邮箱、163 邮箱等国内邮箱可能无法接收推送邮件，建议使用 Gmail、Outlook 等国外邮箱。
                 </p>
               </div>
             </div>
