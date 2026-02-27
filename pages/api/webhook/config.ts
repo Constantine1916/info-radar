@@ -57,11 +57,11 @@ export default async function handler(
       .eq('id', user.id)
       .single();
 
+    // 如果 profile 不存在，返回默认未配置状态（而不是 404）
     if (profileError || !profile) {
-      return res.status(404).json({ 
-        error: 'Profile not found',
-        details: profileError?.message,
-        userId: user.id
+      return res.status(200).json({
+        hasWebhook: false,
+        enabled: false,
       });
     }
 

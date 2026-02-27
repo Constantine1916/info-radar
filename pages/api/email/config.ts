@@ -20,8 +20,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq("id", user.id)
       .single();
 
-    if (error) {
-      return res.status(500).json({ error: error.message });
+    // 如果 profile 不存在或查询失败，返回默认未配置状态（而不是 500）
+    if (error || !data) {
+      return res.status(200).json({
+        address: "",
+        verified: false,
+      });
     }
 
     return res.status(200).json({
