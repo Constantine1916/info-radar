@@ -24,9 +24,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // 获取用户邮箱配置
   const { data: settings, error: settingsError } = await supabaseAdmin
-    .from("user_settings")
+    .from("user_profiles")
     .select("email_address, email_verified, email_enabled")
-    .eq("user_id", user.id)
+    .eq("id", user.id)
     .single();
 
   if (settingsError || !settings?.email_address) {
@@ -45,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { data: feeds, error: feedsError } = await supabaseAdmin
     .from("user_feeds")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("id", user.id)
     .eq("enabled", true)
     .order("sort_order");
 
