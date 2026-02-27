@@ -17,6 +17,7 @@ import {
 } from '../components/ui/dialog';
 import { SYSTEM_FEEDS, UserFeed } from '../lib/types';
 import { FeedItem } from '../components/FeedItem';
+import { FeedDialog } from '../components/FeedDialog';
 
 
 export default function Dashboard() {
@@ -54,6 +55,85 @@ export default function Dashboard() {
     const { data: { session } } = await supabase.auth.getSession();
     return session?.access_token || null;
   };
+  // Dialog handlers
+  const openAddDialog = () => {
+    setDialogMode('add');
+    setDialogFeedId(null);
+    setDialogUrl('');
+    setDialogName('');
+    setDialogOpen(true);
+  };
+
+  const openEditDialog = (feed: UserFeed) => {
+    setDialogMode('edit');
+    setDialogFeedId(feed.id);
+    setDialogUrl(feed.url);
+    setDialogName(feed.name);
+    setDialogOpen(true);
+  };
+
+  const closeDialog = () => {
+    setDialogOpen(false);
+    setDialogUrl('');
+    setDialogName('');
+    setDialogFeedId(null);
+  };
+
+  const handleDialogSubmit = async (url: string, name: string) => {
+    const token = await getToken();
+    if (!token) throw new Error('No auth token');
+
+    if (dialogMode === 'add') {
+      // 添加模式：先尝试智能识别
+      const smartRes = await fetch('/api/feeds/smart-add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ url }),
+      });
+      const smartData = await smartRes.json();
+
+      if (smartRes.ok) {
+        setFeeds(prev => [...prev, smartData.feed]);
+        closeDialog();
+        alert(`✓ 已添加：${smartData.feed.name}`);
+      } else if (smartData.hint) {
+        throw new Error(`${smartData.error}\n\n${smartData.hint}`);
+      } else if (name) {
+        const manualRes = await fetch('/api/feeds', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ name, url }),
+        });
+        const manualData = await manualRes.json();
+        if (manualRes.ok) {
+          setFeeds(prev => [...prev, manualData.feed]);
+          closeDialog();
+          alert(`✓ 已添加：${manualData.feed.name}`);
+        } else {
+          throw new Error(manualData.error || '添加失败');
+        }
+      } else {
+        throw new Error(smartData.error || '添加失败');
+      }
+    } else {
+      // 编辑模式
+      if (!name) throw new Error('请输入名称');
+      const res = await fetch('/api/feeds', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id: dialogFeedId, name, url }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setFeeds(prev => prev.map(f => f.id === dialogFeedId ? data.feed : f));
+        closeDialog();
+        alert(`✓ 已保存`);
+      } else {
+        throw new Error(data.error || '保存失败');
+      }
+    }
+  };
+
 
   const handleSignOut = async () => {
     await signOut();
@@ -118,55 +198,6 @@ export default function Dashboard() {
   };
 
 
-  const handleAddFeed = async () => {
-    if (!newFeedUrl) return;
-    setAddingFeed(true);
-    const token = await getToken();
-    if (!token) { setAddingFeed(false); return; }
-
-    try {
-      // 先尝试智能识别
-      const smartRes = await fetch('/api/feeds/smart-add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ url: newFeedUrl }),
-      });
-      const smartData = await smartRes.json();
-      
-      if (smartRes.ok) {
-        // 智能识别成功
-        setFeeds(prev => [...prev, smartData.feed]);
-        setNewFeedName('');
-        setNewFeedUrl('');
-        setShowAddForm(false);
-        alert(`✓ 已添加：${smartData.feed.name}`);
-      } else if (smartData.hint) {
-        // 智能识别失败，提示用户
-        alert(`${smartData.error}
-
-${smartData.hint}`);
-      } else if (newFeedName) {
-        // 如果用户填写了名称，尝试手动添加
-        const manualRes = await fetch('/api/feeds', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ name: newFeedName, url: newFeedUrl }),
-        });
-        const manualData = await manualRes.json();
-        if (manualRes.ok) {
-          setFeeds(prev => [...prev, manualData.feed]);
-          setNewFeedName('');
-          setNewFeedUrl('');
-          setShowAddForm(false);
-        } else {
-          alert(manualData.error || '添加失败');
-        }
-      } else {
-        alert(smartData.error || '添加失败');
-      }
-    } catch { alert('网络错误'); }
-    finally { setAddingFeed(false); }
-  };
 
   const handleDeleteFeed = async (id: string) => {
     if (!confirm('确定删除这个 RSS 源？')) return;
@@ -209,39 +240,12 @@ ${smartData.hint}`);
   };
 
   const startEdit = (feed: UserFeed) => {
-    setEditingId(feed.id);
-    setEditName(feed.name);
-    setEditUrl(feed.url);
+    openEditDialog(feed);
   };
 
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditName('');
-    setEditUrl('');
-  };
+  const cancelEdit = () => { closeDialog(); };
 
-  const handleSaveEdit = async () => {
-    if (!editingId || !editName || !editUrl) return;
-    setSavingEdit(true);
-    const token = await getToken();
-    if (!token) { setSavingEdit(false); return; }
-
-    try {
-      const res = await fetch('/api/feeds', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ id: editingId, name: editName, url: editUrl }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setFeeds(prev => prev.map(f => f.id === editingId ? data.feed : f));
-        cancelEdit();
-      } else {
-        alert(data.error || '保存失败');
-      }
-    } catch { alert('网络错误'); }
-    finally { setSavingEdit(false); }
-  };
+  const handleSaveEdit = async () => { /* handled by dialog */ };
 
   const saveOrder = useCallback(async (orderedFeeds: UserFeed[]) => {
     const token = await getToken();
@@ -403,40 +407,10 @@ ${smartData.hint}`);
               <h3 className="font-semibold text-gray-900 text-lg">我的 RSS 源</h3>
               <p className="text-xs text-gray-400 mt-1">管理你的数据源，支持拖拽排序</p>
             </div>
-            <Button onClick={() => setShowAddForm(!showAddForm)} className="text-sm">
-              {showAddForm ? '取消' : '+ 添加自定义源'}
+            <Button onClick={openAddDialog} className="text-sm">
+              + 添加自定义源
             </Button>
           </div>
-
-          {showAddForm && (
-            <div className="mb-6 p-5 bg-gray-50 rounded-xl space-y-4">
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-xs text-blue-800">
-                  💡 <strong>智能识别：</strong>支持直接粘贴 Twitter、GitHub、知乎、B站 等平台链接，自动转换为 RSS 源
-                </p>
-                <p className="text-xs text-blue-600 mt-1">
-                  例如：https://twitter.com/elonmusk 或 https://github.com/trending
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">URL 或 RSS 地址</label>
-                <Input 
-                  value={newFeedUrl} 
-                  onChange={(e) => setNewFeedUrl(e.target.value)} 
-                  placeholder="https://twitter.com/username 或 https://example.com/feed.xml" 
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  名称 <span className="text-gray-400 font-normal">(可选，智能识别时自动填充)</span>
-                </label>
-                <Input value={newFeedName} onChange={(e) => setNewFeedName(e.target.value)} placeholder="例如：GitHub Trending" />
-              </div>
-              <Button onClick={handleAddFeed} disabled={addingFeed || !newFeedUrl} className="w-full">
-                {addingFeed ? '添加中...' : '添加源'}
-              </Button>
-            </div>
-          )}
 
           {feeds.length === 0 && !showAddForm ? (
             <div className="text-center py-12">
@@ -466,6 +440,15 @@ ${smartData.hint}`);
           ) : null}
         </div>
       </main>
+      <FeedDialog
+        open={dialogOpen}
+        mode={dialogMode}
+        initialUrl={dialogUrl}
+        initialName={dialogName}
+        onClose={closeDialog}
+        onSubmit={handleDialogSubmit}
+      />
+
     </div>
   );
 }
