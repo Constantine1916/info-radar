@@ -309,10 +309,10 @@ export default function Dashboard() {
                 <Button onClick={() => handlePush('telegram')} disabled={pushingTelegram || feeds.length === 0} className="w-full">
                   {pushingTelegram ? '推送中...' : '立即推送'}
                 </Button>
-                <Button variant="outline" onClick={() => router.push('/settings')} className="w-full">管理配置</Button>
+                <Button variant="outline" onClick={() => router.push('/settings?tab=telegram')} className="w-full">管理配置</Button>
               </div>
             ) : (
-              <Button onClick={() => router.push('/settings')} className="w-full">绑定 Telegram</Button>
+              <Button onClick={() => router.push('/settings?tab=telegram')} className="w-full">绑定 Telegram</Button>
             )}
           </div>
           <div className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-xl transition-all duration-300">
@@ -328,10 +328,10 @@ export default function Dashboard() {
                 <Button onClick={() => handlePush('wecom')} disabled={pushingWeCom || feeds.length === 0} className="w-full bg-green-500 hover:bg-green-600">
                   {pushingWeCom ? '推送中...' : '立即推送'}
                 </Button>
-                <Button variant="outline" onClick={() => router.push('/settings')} className="w-full">管理配置</Button>
+                <Button variant="outline" onClick={() => router.push('/settings?tab=wecom')} className="w-full">管理配置</Button>
               </div>
             ) : (
-              <Button onClick={() => router.push('/settings')} className="w-full bg-green-500 hover:bg-green-600">绑定企业微信</Button>
+              <Button onClick={() => router.push('/settings?tab=wecom')} className="w-full bg-green-500 hover:bg-green-600">绑定企业微信</Button>
             )}
           </div>
           <div className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-xl transition-all duration-300">
@@ -355,10 +355,10 @@ export default function Dashboard() {
                 >
                   {pushingEmail ? '推送中...' : '立即推送'}
                 </Button>
-                <Button variant="outline" onClick={() => router.push('/settings')} className="w-full">管理配置</Button>
+                <Button variant="outline" onClick={() => router.push('/settings?tab=email')} className="w-full">管理配置</Button>
               </div>
             ) : (
-              <Button onClick={() => router.push('/settings')} className="w-full bg-purple-500 hover:bg-purple-600">绑定邮箱</Button>
+              <Button onClick={() => router.push('/settings?tab=email')} className="w-full bg-purple-500 hover:bg-purple-600">绑定邮箱</Button>
             )}
           </div>
         </div>

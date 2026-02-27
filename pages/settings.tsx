@@ -13,6 +13,15 @@ export default function Settings() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('telegram');
+
+  // 从 URL 参数读取默认 tab
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab') as Tab | null;
+    if (tab && (tab === 'telegram' || tab === 'wecom' || tab === 'email')) {
+      setActiveTab(tab);
+    }
+  }, []);
   
   // Telegram state
   const [botToken, setBotToken] = useState('');
