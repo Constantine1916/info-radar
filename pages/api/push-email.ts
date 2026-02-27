@@ -45,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { data: feeds, error: feedsError } = await supabaseAdmin
     .from("user_feeds")
     .select("*")
-    .eq("id", user.id)
+    .eq("user_id", user.id)
     .eq("enabled", true)
     .order("sort_order");
 
