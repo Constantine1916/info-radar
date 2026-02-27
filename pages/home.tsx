@@ -155,31 +155,7 @@ export default function Dashboard() {
       if (feedsRes.ok) {
         const data = await feedsRes.json();
         const userFeeds = data.feeds || [];
-        if (userFeeds.length === 0) {
-          // 新用户：自动订阅所有系统默认源
-          const added: UserFeed[] = [];
-          for (const sf of SYSTEM_FEEDS) {
-            try {
-              console.log('[Init] Adding default feed:', sf.name);
-              const addRes = await fetch('/api/feeds', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ name: sf.name, url: sf.url, is_system: true }),
-              });
-              if (addRes.ok) {
-                const d = await addRes.json();
-                added.push(d.feed);
-              } else {
-                console.error('[Init] Failed to add', sf.name, await addRes.text());
-              }
-            } catch (err) {
-              console.error('[Init] Exception adding', sf.name, err);
-            }
-          }
-          setFeeds(added);
-        } else {
-          setFeeds(userFeeds);
-        }
+        setFeeds(userFeeds);
       }
       if (tgRes.ok) {
         const data = await tgRes.json();
