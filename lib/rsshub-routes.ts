@@ -69,7 +69,7 @@ export function parseRSSHubURL(inputUrl: string): RSSHubRoute | null {
       // 知乎热榜
       if (pathname === '/hot' || pathname === '/') {
         return {
-          rss: `${RSSHUB_BASE}/zhihu/hotlist`,
+          rss: `${RSSHUB_BASE}/zhihu/hot`,
           name: '知乎热榜',
           platform: 'zhihu'
         };
