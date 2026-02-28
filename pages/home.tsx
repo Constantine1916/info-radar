@@ -263,10 +263,11 @@ export default function Dashboard() {
     const token = await getToken();
     if (!token) { setter(false); return; }
 
-    const endpoint = ch === 'telegram' ? '/api/push-now' : ch === 'wecom' ? '/api/push-wecom' : '/api/push-email';
+    let endpoint = '/api/push-now';
+    let urlWithParams = `${endpoint}?channel=${ch}`;
 
     try {
-      const res = await fetch(endpoint, {
+      const res = await fetch(urlWithParams, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
