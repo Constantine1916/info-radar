@@ -14,6 +14,7 @@
 ### 2. 数据推送
 - 📱 **Telegram** - 每日摘要推送
 - 📧 **邮件推送** - 支持 Resend / SendCloud 发送每日摘要
+- 💬 **企业微信 Hook** - 通过 Webhook 推送到企业微信群
 
 ---
 
@@ -154,6 +155,7 @@ info-radar/
 **推送**：
 - Telegram Bot API
 - 邮件：Resend (国际) / SendCloud (国内)
+- 企业微信 Webhook
 
 ---
 
@@ -170,6 +172,7 @@ info-radar/
 | `RESEND_API_KEY` | Resend API Key | 可选 |
 | `SENDCLOUD_API_USER` | SendCloud 用户名 | 可选 |
 | `SENDCLOUD_API_KEY` | SendCloud API Key | 可选 |
+| `WECOM_WEBHOOK_URL` | 企业微信 Webhook 地址 | 可选 |
 
 ---
 
