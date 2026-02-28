@@ -12,7 +12,8 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 const parser = new Parser({ timeout: 15000 });
 
 interface ProfileData {
-  last_email_push_at: string | null; // <-- 添加此行
+  last_email_push_at: string | null; // Added for email cooldown
+  email_verified_at: string | null; // Added for email verification status
   telegram_bot_token: string | null;
   telegram_chat_id: string | null;
   telegram_verified: boolean | null;
@@ -73,7 +74,24 @@ async function sendWeComMessage(webhookUrl: string, text: string) {
 
 async function sendEmailMessage(to: string, text: string) {
   console.log(`Sending email to ${to} with content: ${text.substring(0, 50)}...`);
-  // TODO: Implement actual email sending logic here
+  // TODO: Implement actual email sending logic here, e.g., using Nodemailer
+  // Example:
+  /*
+  const nodemailer = require('nodemailer');
+  let transporter = nodemailer.createTransport({
+    service: 'gmail', // or other service
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+  await transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: to,
+    subject: 'Info Radar 推送',
+    html: text.replace(/\\n/g, '<br/>'), // Convert newlines to <br/> for HTML email
+  });
+  */
 }
 
 
@@ -103,10 +121,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const channel = typeof req.query.channel === 'string' ? req.query.channel : null;
 
   try {
-    // 获取用户配置
+    // 获取用户配置，包括 email_verified_at 和 last_email_push_at
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('user_profiles')
-      .select('telegram_bot_token, telegram_chat_id, telegram_verified, webhook_key, webhook_enabled, last_email_push_at, email_verified_at') // <-- 修改此行，添加email_verified_at
+      .select('telegram_bot_token, telegram_chat_id, telegram_verified, webhook_key, webhook_enabled, last_email_push_at, email_verified_at')
       .eq('id', user.id)
       .single<ProfileData>();
 
@@ -114,8 +132,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const hasTelegram = profile.telegram_verified && profile.telegram_bot_token && profile.telegram_chat_id;
     const hasWeCom = profile.webhook_enabled && profile.webhook_key;
-    // 假设hasEmail的判断逻辑为 user.email 存在且已验证
-    const hasEmail = user.email && profile.email_verified_at; // TODO: 假设profile里有email_verified_at字段，如果不是，需要调整
+    const hasEmail = user.email && profile.email_verified_at; // Check if user has an email and it's verified
 
     // 获取用户订阅的 RSS 源
     const { data: feeds } = await supabaseAdmin
@@ -195,6 +212,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       sent.push('Telegram');
     }
 
+    // Email 推送逻辑
     if (hasEmail && (!channel || channel === 'email')) {
       const lastPushAt = profile.last_email_push_at ? new Date(profile.last_email_push_at).getTime() : 0;
       const now = Date.now();
@@ -204,13 +222,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(429).json({ error: `邮件推送冷却中，请 ${COOLDOWN_SECONDS - Math.floor((now - lastPushAt) / 1000)} 秒后再试。` });
       }
 
-      // Re-fetch email config to ensure it's verified right before sending
-      // 注意：这里email_verified_at字段应该从profile中获取，而不是重新查询
-      // 为了简化，我将直接使用 profile.email_verified_at 进行判断
-      if (!profile.email_verified_at) {
-          return res.status(400).json({ error: '邮箱未验证或配置错误，无法发送邮件' });
-      }
-
+      // 这里的 emailMsg 已经正确构建了，不再赘述
       let emailMsg = `📡 Info Radar 推送\n📅 ${date}\n\n`;
       emailMsg += `📊 共 ${totalCount} 条来自 ${feedResults.length} 个源\n\n`;
 
@@ -227,7 +239,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       emailMsg += '✅ by Info Radar';
 
-      await sendEmailMessage(user.email, emailMsg);
+      await sendEmailMessage(user.email!, emailMsg); // user.email is guaranteed to exist by hasEmail check
       sent.push('Email');
 
       await supabaseAdmin.from('user_profiles')
