@@ -79,6 +79,12 @@ export function FeedDialog({
               例如：https://x.com/elonmusk 或 https://github.com/trending
             </p>
           )}
+          {mode === 'add' && (
+            <p className="text-xs text-orange-600 mt-2">
+              🚨 <strong>反爬严格平台：</strong>
+              知乎、微博等平台有严重的反爬策略，RSS 源可能随时失效，稳定性无法保证
+            </p>
+          )}
         </div>
 
         <Form
