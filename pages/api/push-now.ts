@@ -2,6 +2,9 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
 import Parser from 'rss-parser';
+import { sendEmail } from '../../lib/email/email-sender';
+import { generatePushEmailHTML } from '../../lib/email/templates';
+import type { InfoItem } from '../../lib/types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -14,6 +17,8 @@ const parser = new Parser({ timeout: 15000 });
 interface ProfileData {
   last_email_push_at: string | null; // Added for email cooldown
   email_verified_at: string | null; // Added for email verification status
+  email_address: string | null;
+  email_verified: boolean | null;
   telegram_bot_token: string | null;
   telegram_chat_id: string | null;
   telegram_verified: boolean | null;
@@ -72,29 +77,6 @@ async function sendWeComMessage(webhookUrl: string, text: string) {
   }
 }
 
-async function sendEmailMessage(to: string, text: string) {
-  console.log(`Sending email to ${to} with content: ${text.substring(0, 50)}...`);
-  // TODO: Implement actual email sending logic here, e.g., using Nodemailer
-  // Example:
-  /*
-  const nodemailer = require('nodemailer');
-  let transporter = nodemailer.createTransport({
-    service: 'gmail', // or other service
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
-    to: to,
-    subject: 'Info Radar 推送',
-    html: text.replace(/\\n/g, '<br/>'), // Convert newlines to <br/> for HTML email
-  });
-  */
-}
-
-
 async function collectFeed(feedName: string, feedUrl: string): Promise<FeedItem[]> {
   try {
     const feed = await parser.parseURL(feedUrl);
@@ -106,6 +88,23 @@ async function collectFeed(feedName: string, feedUrl: string): Promise<FeedItem[
   } catch {
     return [];
   }
+}
+
+function toEmailItems(items: FeedItem[]): InfoItem[] {
+  const now = new Date().toISOString();
+
+  return items.map((item, index) => ({
+    id: `push-now-${index}`,
+    item_id: item.link || `${item.source}-${index}`,
+    title: item.title,
+    link: item.link,
+    content: '',
+    source: item.source,
+    domain: item.source,
+    published_at: now,
+    collected_at: now,
+    credibility_score: 0,
+  }));
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -124,7 +123,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 获取用户配置，包括 email_verified_at 和 last_email_push_at
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('user_profiles')
-      .select('telegram_bot_token, telegram_chat_id, telegram_verified, webhook_key, webhook_enabled, last_email_push_at, email_verified_at')
+      .select('telegram_bot_token, telegram_chat_id, telegram_verified, webhook_key, webhook_enabled, last_email_push_at, email_verified_at, email_address, email_verified')
       .eq('id', user.id)
       .single<ProfileData>();
 
@@ -132,7 +131,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const hasTelegram = profile.telegram_verified && profile.telegram_bot_token && profile.telegram_chat_id;
     const hasWeCom = profile.webhook_enabled && profile.webhook_key;
-    const hasEmail = user.email && profile.email_verified_at; // Check if user has an email and it's verified
+    const hasEmail = profile.email_verified && profile.email_address;
+
+    if (channel === 'email' && !hasEmail) {
+      return res.status(400).json({ error: '邮箱未配置或未验证' });
+    }
 
     // 获取用户订阅的 RSS 源
     const { data: feeds } = await supabaseAdmin
@@ -222,24 +225,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(429).json({ error: `邮件推送冷却中，请 ${COOLDOWN_SECONDS - Math.floor((now - lastPushAt) / 1000)} 秒后再试。` });
       }
 
-      // 这里的 emailMsg 已经正确构建了，不再赘述
-      let emailMsg = `📡 Info Radar 推送\n📅 ${date}\n\n`;
-      emailMsg += `📊 共 ${totalCount} 条来自 ${feedResults.length} 个源\n\n`;
+      const today = new Date().toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+      const result = await sendEmail({
+        to: profile.email_address!,
+        subject: `📡 Info Radar - 今日推送 (${today})`,
+        html: generatePushEmailHTML(toEmailItems(pushedItems), today),
+      });
 
-      for (const fr of feedResults) {
-        const items = allItems.filter(item => item.source === fr.name);
-        const displayItems = items.slice(0, 5);
-        emailMsg += `📌 ${fr.name} (${displayItems.length})\n`;
-
-        displayItems.forEach((item, i) => {
-          const title = item.title.substring(0, 80) + (item.title.length > 80 ? '...' : '');
-          emailMsg += `${i + 1}. ${title} - ${item.link}\n`;
-        });
-        emailMsg += '\n';
+      if (!result.success) {
+        throw new Error(result.error || '邮件发送失败');
       }
-      emailMsg += '✅ by Info Radar';
 
-      await sendEmailMessage(user.email!, emailMsg); // user.email is guaranteed to exist by hasEmail check
+      console.log(`Push email sent via ${result.provider} to ${profile.email_address}`);
       sent.push('Email');
 
       await supabaseAdmin.from('user_profiles')
