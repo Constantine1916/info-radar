@@ -8,3 +8,5 @@ data/
 next-env.d.ts
 .vercel
 .env*.local
+AGENTS.md
+docs/*
