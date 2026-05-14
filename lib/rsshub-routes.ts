@@ -13,9 +13,22 @@ const RSSHUB_BASE = 'http://101.32.243.232:1200';
 
 export function parseRSSHubURL(inputUrl: string): RSSHubRoute | null {
   try {
-    const url = new URL(inputUrl);
-    const hostname = url.hostname.replace('www.', '');
+    const url = new URL(inputUrl.trim());
+    const hostname = url.hostname.replace(/^www\./, '');
     const pathname = url.pathname;
+
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return null;
+    }
+
+    // AI HOT 的 /feed/daily.xml 当前会返回 304 空响应，规范化到可采集的公开 RSS。
+    if (hostname === 'aihot.virxact.com' && pathname.startsWith('/feed')) {
+      return {
+        rss: `${url.origin}/feed.xml`,
+        name: 'AI HOT',
+        platform: 'rss'
+      };
+    }
 
     // Twitter
     if (hostname === 'twitter.com' || hostname === 'x.com') {
@@ -110,7 +123,11 @@ export function parseRSSHubURL(inputUrl: string): RSSHubRoute | null {
       }
     }
 
-    return null;
+    return {
+      rss: url.toString(),
+      name: `${hostname} RSS`,
+      platform: 'rss'
+    };
   } catch (error) {
     console.error('Failed to parse URL:', error);
     return null;
@@ -122,13 +139,52 @@ export function parseRSSHubURL(inputUrl: string): RSSHubRoute | null {
  */
 export async function validateRSSFeed(rssUrl: string): Promise<boolean> {
   try {
-    const response = await fetch(rssUrl, { 
+    const headResponse = await fetch(rssUrl, {
       method: 'HEAD',
-      signal: AbortSignal.timeout(5000)
+      headers: {
+        accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
+      },
+      signal: AbortSignal.timeout(8000)
     });
-    return response.ok;
+
+    const headContentType = headResponse.headers.get('content-type');
+    if (headResponse.ok && isFeedContentType(headContentType)) {
+      return true;
+    }
   } catch (error) {
-    console.error('Failed to validate RSS feed:', error);
+    console.error('Failed to validate RSS feed with HEAD:', error);
+  }
+
+  try {
+    const getResponse = await fetch(rssUrl, {
+      method: 'GET',
+      headers: {
+        accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
+      },
+      signal: AbortSignal.timeout(15000)
+    });
+
+    if (!getResponse.ok) {
+      return false;
+    }
+
+    const contentType = getResponse.headers.get('content-type');
+    const body = await getResponse.text();
+    return isFeedContentType(contentType) || isFeedBody(body);
+  } catch (error) {
+    console.error('Failed to validate RSS feed with GET:', error);
     return false;
   }
+}
+
+function isFeedContentType(contentType: string | null): boolean {
+  if (!contentType) {
+    return false;
+  }
+
+  return /(?:rss|atom)\+xml/i.test(contentType);
+}
+
+function isFeedBody(body: string): boolean {
+  return /<(rss|feed|rdf:RDF)\b/i.test(body.slice(0, 2000));
 }
