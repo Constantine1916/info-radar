@@ -1,17 +1,37 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Reorder, useDragControls } from 'framer-motion';
 import { UserFeed } from '../lib/types';
+import { DEFAULT_PUSH_LIMIT, normalizePushLimit } from '../lib/feed-push-limit';
 
 interface FeedItemProps {
   feed: UserFeed;
   onEdit: (feed: UserFeed) => void;
   onDelete: (id: string) => void;
   onToggle: (id: string, enabled: boolean) => void;
+  onPushLimitChange: (id: string, pushLimit: number) => void;
 }
 
-export function FeedItem({ feed, onEdit, onDelete, onToggle }: FeedItemProps) {
+export function FeedItem({ feed, onEdit, onDelete, onToggle, onPushLimitChange }: FeedItemProps) {
   const controls = useDragControls();
   const scrollRaf = useRef<number | null>(null);
+  const currentPushLimit = feed.push_limit ?? DEFAULT_PUSH_LIMIT;
+  const [pushLimitValue, setPushLimitValue] = useState(String(currentPushLimit));
+
+  useEffect(() => {
+    setPushLimitValue(String(currentPushLimit));
+  }, [currentPushLimit]);
+
+  const commitPushLimit = () => {
+    try {
+      const nextLimit = normalizePushLimit(pushLimitValue);
+      setPushLimitValue(String(nextLimit));
+      if (nextLimit !== currentPushLimit) {
+        onPushLimitChange(feed.id, nextLimit);
+      }
+    } catch {
+      setPushLimitValue(String(currentPushLimit));
+    }
+  };
 
   const startDrag = (e: React.PointerEvent) => {
     controls.start(e);
@@ -72,6 +92,26 @@ export function FeedItem({ feed, onEdit, onDelete, onToggle }: FeedItemProps) {
           <div className="text-xs text-gray-400 truncate mt-1">{feed.url}</div>
         </div>
         <div className="flex items-center gap-1 sm:gap-2 ml-2 sm:ml-4 flex-shrink-0">
+          <label className="flex items-center gap-1 text-xs text-gray-500">
+            <span className="hidden sm:inline">推送</span>
+            <input
+              type="number"
+              min={1}
+              max={100}
+              step={1}
+              value={pushLimitValue}
+              onChange={(e) => setPushLimitValue(e.target.value)}
+              onBlur={commitPushLimit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.currentTarget.blur();
+                }
+              }}
+              className="h-8 w-16 rounded-md border border-gray-200 px-2 text-center text-sm text-gray-700 focus:border-blue-400 focus:outline-none"
+              title="1-100 正整数"
+            />
+          </label>
+
           {/* 开关 */}
           <button
             onClick={() => onToggle(feed.id, !feed.enabled)}

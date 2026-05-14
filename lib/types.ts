@@ -21,6 +21,7 @@ export interface UserFeed {
   created_at: string;
   updated_at: string;
   sort_order: number;
+  push_limit: number;
 }
 
 export interface InfoItem {

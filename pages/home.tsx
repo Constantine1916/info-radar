@@ -19,6 +19,7 @@ import {
 import { SYSTEM_FEEDS, UserFeed } from '../lib/types';
 import { FeedItem } from '../components/FeedItem';
 import { FeedDialog } from '../components/FeedDialog';
+import { DEFAULT_PUSH_LIMIT, normalizePushLimit } from '../lib/feed-push-limit';
 
 
 export default function Dashboard() {
@@ -157,7 +158,10 @@ export default function Dashboard() {
       if (feedsRes.ok) {
         const data = await feedsRes.json();
         const userFeeds = data.feeds || [];
-        setFeeds(userFeeds);
+        setFeeds(userFeeds.map((feed: UserFeed) => ({
+          ...feed,
+          push_limit: feed.push_limit ?? DEFAULT_PUSH_LIMIT,
+        })));
       }
       if (tgRes.ok) {
         const data = await tgRes.json();
@@ -219,6 +223,42 @@ export default function Dashboard() {
     } catch {
       setFeeds(prev => prev.map(f => f.id === id ? { ...f, enabled: !enabled } : f));
       alert('网络错误');
+    }
+  };
+
+  const handlePushLimitChange = async (id: string, pushLimit: number) => {
+    let normalizedPushLimit: number;
+    try {
+      normalizedPushLimit = normalizePushLimit(pushLimit);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '推送条数不正确');
+      return;
+    }
+
+    const previousFeed = feeds.find(f => f.id === id);
+    if (!previousFeed || previousFeed.push_limit === normalizedPushLimit) return;
+
+    const token = await getToken();
+    if (!token) return;
+
+    setFeeds(prev => prev.map(f => f.id === id ? { ...f, push_limit: normalizedPushLimit } : f));
+
+    try {
+      const res = await fetch('/api/feeds', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id, push_limit: normalizedPushLimit }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setFeeds(prev => prev.map(f => f.id === id ? data.feed : f));
+      } else {
+        setFeeds(prev => prev.map(f => f.id === id ? previousFeed : f));
+        message.error(data.error || '更新推送条数失败');
+      }
+    } catch {
+      setFeeds(prev => prev.map(f => f.id === id ? previousFeed : f));
+      message.error('网络错误');
     }
   };
 
@@ -408,6 +448,7 @@ export default function Dashboard() {
                   onEdit={openEditDialog}
                   onDelete={handleDeleteFeed}
                   onToggle={handleToggleEnabled}
+                  onPushLimitChange={handlePushLimitChange}
                 />
               ))}
             </Reorder.Group>

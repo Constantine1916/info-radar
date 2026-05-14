@@ -4,8 +4,15 @@ import { sendEmail } from "../../lib/email/email-sender";
 import { generatePushEmailHTML } from "../../lib/email/templates";
 import Parser from "rss-parser";
 import { InfoItem } from "../../lib/types";
+import { normalizePushLimit } from "../../lib/feed-push-limit";
 
 const parser = new Parser();
+
+interface FeedRecord {
+  name: string;
+  url: string;
+  push_limit: number | null;
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -43,7 +50,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .select("*")
     .eq("user_id", user.id)
     .eq("enabled", true)
-    .order("sort_order");
+    .order("sort_order")
+    .returns<FeedRecord[]>();
 
   if (feedsError || !feeds || feeds.length === 0) {
     return res.status(400).json({ error: "No active feeds" });
@@ -55,7 +63,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   for (const feed of feeds) {
     try {
       const rssFeed = await parser.parseURL(feed.url);
-      const items = rssFeed.items.slice(0, 5).map((item, idx) => ({
+      const pushLimit = normalizePushLimit(feed.push_limit);
+      const items = rssFeed.items.slice(0, pushLimit).map((item, idx) => ({
         id: `temp-${feed.name}-${idx}`,
         item_id: item.guid || item.link || `${feed.name}-${idx}`,
         title: item.title || "无标题",

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabase, supabaseAdmin } from '../../../lib/supabase-admin';
+import { normalizePushLimit } from '../../../lib/feed-push-limit';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const token = req.headers.authorization?.replace('Bearer ', '');
@@ -22,11 +23,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // POST - 添加新 RSS 源
   if (req.method === 'POST') {
-    const { name, url, is_system } = req.body;
+    const { name, url, is_system, push_limit } = req.body;
     if (!name || !url) return res.status(400).json({ error: '请填写名称和 URL' });
 
     // 简单校验 URL
     try { new URL(url); } catch { return res.status(400).json({ error: 'URL 格式不正确' }); }
+
+    let pushLimit: number;
+    try {
+      pushLimit = normalizePushLimit(push_limit);
+    } catch (error) {
+      return res.status(400).json({ error: error instanceof Error ? error.message : '推送条数不正确' });
+    }
 
     // 获取当前最大 sort_order
     const { data: existing } = await supabaseAdmin
@@ -39,7 +47,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data, error } = await supabaseAdmin
       .from('user_feeds')
-      .insert({ user_id: user.id, name, url, is_system: is_system ?? false, sort_order: nextOrder })
+      .insert({
+        user_id: user.id,
+        name,
+        url,
+        is_system: is_system ?? false,
+        sort_order: nextOrder,
+        ...(push_limit !== undefined ? { push_limit: pushLimit } : {}),
+      })
       .select()
       .single();
 
@@ -52,9 +67,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // PUT - 编辑 RSS 源
   if (req.method === 'PUT') {
-    const { id, name, url, enabled } = req.body;
+    const { id, name, url, enabled, push_limit } = req.body;
     if (!id) return res.status(400).json({ error: 'Missing feed id' });
-    if (name === undefined && url === undefined && enabled === undefined) {
+    if (name === undefined && url === undefined && enabled === undefined && push_limit === undefined) {
       return res.status(400).json({ error: '请至少提供一个字段' });
     }
 
@@ -78,6 +93,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (name !== undefined) update.name = name;
     if (url !== undefined) update.url = url;
     if (enabled !== undefined) update.enabled = enabled;
+    if (push_limit !== undefined) {
+      try {
+        update.push_limit = normalizePushLimit(push_limit);
+      } catch (error) {
+        return res.status(400).json({ error: error instanceof Error ? error.message : '推送条数不正确' });
+      }
+    }
 
     const { data, error } = await supabaseAdmin
       .from('user_feeds')

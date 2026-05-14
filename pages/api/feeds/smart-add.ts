@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../lib/supabase-admin';
+import { DEFAULT_PUSH_LIMIT, normalizePushLimit } from '../../../lib/feed-push-limit';
 import { parseRSSHubURL, validateRSSFeed } from '../../../lib/rsshub-routes';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -17,9 +18,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Invalid token' });
   }
 
-  const { url } = req.body;
+  const { url, push_limit } = req.body;
   if (!url || typeof url !== 'string') {
     return res.status(400).json({ error: 'URL is required' });
+  }
+
+  let pushLimit: number;
+  try {
+    pushLimit = push_limit === undefined ? DEFAULT_PUSH_LIMIT : normalizePushLimit(push_limit);
+  } catch (error) {
+    return res.status(400).json({ error: error instanceof Error ? error.message : '推送条数不正确' });
   }
 
   try {
@@ -80,6 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         is_system: false,
         sort_order: nextOrder,
         enabled: true,
+        ...(push_limit !== undefined ? { push_limit: pushLimit } : {}),
       })
       .select()
       .single();

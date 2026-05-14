@@ -2,8 +2,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../lib/supabase-admin';
 import axios from 'axios';
 import Parser from 'rss-parser';
+import { normalizePushLimit } from '../../lib/feed-push-limit';
+import { splitMessageByByteLength } from '../../lib/message-chunks';
 
 const parser = new Parser({ timeout: 15000 });
+const PUSH_MESSAGE_MAX_BYTES = 3500;
 
 interface ProfileData {
   id: string;
@@ -20,58 +23,42 @@ interface FeedItem {
   source: string;
 }
 
+interface FeedRecord {
+  name: string;
+  url: string;
+  push_limit: number | null;
+}
+
 async function sendTelegramMessage(botToken: string, chatId: string, text: string) {
-  await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-    chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true,
-  });
+  for (const chunk of splitMessageByByteLength(text, PUSH_MESSAGE_MAX_BYTES)) {
+    await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      chat_id: chatId, text: chunk, parse_mode: 'HTML', disable_web_page_preview: true,
+    });
+    await new Promise(r => setTimeout(r, 300));
+  }
 }
 
 async function sendWeComMessage(webhookUrl: string, text: string) {
-  // 企微 markdown 限制约 4096 字节，按源分批发送
-  const MAX_LEN = 3500;
-  
-  const sendOne = async (msg: string) => {
+  for (const chunk of splitMessageByByteLength(text, PUSH_MESSAGE_MAX_BYTES)) {
     try {
       await axios.post(webhookUrl, {
-        msgtype: 'markdown', markdown: { content: msg },
+        msgtype: 'markdown', markdown: { content: chunk },
       }, { headers: { 'Content-Type': 'application/json' } });
     } catch (e) {
       console.error('WeCom send error:', e);
     }
     await new Promise(r => setTimeout(r, 300));
-  };
-
-  if (Buffer.byteLength(text, 'utf8') <= MAX_LEN) {
-    await sendOne(text);
-    return;
-  }
-
-  // 按 "📌" 分段（每个源一段）
-  const parts = text.split(/(?=📌)/);
-  const header = parts[0]; // 头部信息
-  let batch = header;
-
-  for (let i = 1; i < parts.length; i++) {
-    const part = parts[i];
-    if (Buffer.byteLength(batch + part, 'utf8') > MAX_LEN && batch.trim().length > 0) {
-      await sendOne(batch.trim());
-      batch = '';
-    }
-    batch += part;
-  }
-
-  if (batch.trim()) {
-    await sendOne(batch.trim());
   }
 }
 
-async function collectFeed(name: string, url: string): Promise<FeedItem[]> {
+async function collectFeed(feedRecord: FeedRecord): Promise<FeedItem[]> {
   try {
-    const feed = await parser.parseURL(url);
-    return (feed.items || []).slice(0, 10).map(item => ({
+    const feed = await parser.parseURL(feedRecord.url);
+    const pushLimit = normalizePushLimit(feedRecord.push_limit);
+    return (feed.items || []).slice(0, pushLimit).map(item => ({
       title: item.title || 'Untitled',
       link: item.link || '',
-      source: name,
+      source: feedRecord.name,
     }));
   } catch { return []; }
 }
@@ -104,10 +91,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // 获取用户的 RSS 源
       const { data: feeds } = await supabaseAdmin
         .from('user_feeds')
-        .select('name, url')
-      .order('sort_order', { ascending: true })
+        .select('*')
+        .order('sort_order', { ascending: true })
         .eq('user_id', profile.id)
-        .eq('enabled', true);
+        .eq('enabled', true)
+        .returns<FeedRecord[]>();
 
       if (!feeds || feeds.length === 0) {
         results.push.skipped++;
@@ -116,7 +104,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // 并发采集用户的所有 RSS 源
       const collectResults = await Promise.allSettled(
-        feeds.map(f => collectFeed(f.name, f.url))
+        feeds.map(f => collectFeed(f))
       );
 
       const allItems: FeedItem[] = [];
@@ -146,7 +134,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const pushedItems: { title: string; link: string; source: string }[] = [];
       for (const fr of feedResults) {
         const items = allItems.filter(item => item.source === fr.name);
-        const displayItems = items.slice(0, 5);
+        const displayItems = items;
         tgMsg += `📌 <b>${fr.name}</b> (${displayItems.length})\n`;
         wecomMsg += `📌 **${fr.name}** (${displayItems.length})\n`;
 
