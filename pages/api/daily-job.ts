@@ -2,8 +2,10 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../lib/supabase-admin';
 import axios from 'axios';
 import Parser from 'rss-parser';
+import { summarizeAxiosError } from '../../lib/axios-error-summary';
 import { normalizePushLimit } from '../../lib/feed-push-limit';
 import { splitMessageByByteLength } from '../../lib/message-chunks';
+import { escapeTelegramHtml, telegramLink } from '../../lib/telegram-html';
 
 const parser = new Parser({ timeout: 15000 });
 const PUSH_MESSAGE_MAX_BYTES = 3500;
@@ -135,12 +137,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       for (const fr of feedResults) {
         const items = allItems.filter(item => item.source === fr.name);
         const displayItems = items;
-        tgMsg += `📌 <b>${fr.name}</b> (${displayItems.length})\n`;
+        tgMsg += `📌 <b>${escapeTelegramHtml(fr.name)}</b> (${displayItems.length})\n`;
         wecomMsg += `📌 **${fr.name}** (${displayItems.length})\n`;
 
         displayItems.forEach((item, i) => {
           const title = item.title.substring(0, 80) + (item.title.length > 80 ? '...' : '');
-          tgMsg += `${i + 1}. <a href="${item.link}">${title}</a>\n`;
+          tgMsg += `${i + 1}. ${telegramLink(item.link, title)}\n`;
           wecomMsg += `${i + 1}. [${title}](${item.link})\n`;
         });
         tgMsg += '\n';
@@ -156,7 +158,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         try {
           await sendTelegramMessage(profile.telegram_bot_token, profile.telegram_chat_id, tgMsg);
           results.push.telegram++;
-        } catch (e) { console.error('TG fail:', e); }
+        } catch (e) { console.error('TG fail:', summarizeAxiosError(e)); }
         await new Promise(r => setTimeout(r, 500));
       }
 
